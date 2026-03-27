@@ -1,0 +1,29 @@
+ObjC.import('stdlib');
+
+function run() {
+  try {
+    const Contacts = Application('Contacts');
+    const people = Contacts.people();
+    const payload = [];
+
+    for (let index = 0; index < people.length; index += 1) {
+      const person = people[index];
+      const phones = person.phones().map((entry) => String(entry.value()));
+      const emails = person.emails().map((entry) => String(entry.value()));
+
+      payload.push({
+        firstName: person.firstName() || null,
+        lastName: person.lastName() || null,
+        phoneNumbers: phones,
+        emails,
+        modifiedAt: null,
+      });
+    }
+
+    return JSON.stringify(payload);
+  } catch (error) {
+    return JSON.stringify({
+      error: String(error),
+    });
+  }
+}

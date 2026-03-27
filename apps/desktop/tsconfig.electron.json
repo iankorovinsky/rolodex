@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["node"],
+    "noEmit": false,
+    "outDir": "./dist-electron",
+    "rootDir": "./src/electron"
+  },
+  "include": ["src/electron/**/*.ts"]
+}

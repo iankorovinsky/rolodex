@@ -1,0 +1,50 @@
+node_modules
+.bun
+.env
+.env.local
+*.log
+.DS_Store
+dist
+.next
+out
+build
+.turbo
+
+# Electron desktop build artifacts
+/apps/desktop/dist-electron/**
+/apps/desktop/release/**
+*.asar
+*.blockmap
+builder-debug.yml
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Prisma
+packages/db/generated
+
+# Next.js
+next-env.d.ts
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+
+# Yarn
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Testing
+coverage
+
+# Misc
+*.pem
+
+.trigger/

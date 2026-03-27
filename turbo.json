@@ -1,0 +1,35 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "dev": {
+      "cache": false
+    },
+    "build": {
+      "dependsOn": ["^build", "^generate"],
+      "outputs": ["dist/**", "dist-electron/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^generate"],
+      "outputs": []
+    },
+    "lint": {
+      "outputs": []
+    },
+    "test": {
+      "outputs": [],
+      "cache": false
+    },
+    "generate": {
+      "outputs": ["generated/**"]
+    },
+    "migrate:dev": {
+      "cache": false
+    },
+    "studio": {
+      "cache": false
+    },
+    "format": {
+      "outputs": []
+    }
+  }
+}

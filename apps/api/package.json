@@ -1,0 +1,36 @@
+{
+  "name": "@rolodex/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "bun build ./src/server.ts --outdir ./dist --target bun",
+    "start": "dotenv -e ../../.env -- bun ./dist/server.js",
+    "dev": "dotenv -e ../../.env -- bun --watch ./src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint 'src/**/*.ts'",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "@rolodex/db": "workspace:*",
+    "@rolodex/types": "workspace:*",
+    "@prisma/client": "^6.0.0",
+    "@supabase/supabase-js": "^2.49.8",
+    "dotenv": "^16.4.7",
+    "express": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.1",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "eslint": "^9.22.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.9",
+    "prettier": "^3.5.3",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
+  }
+}

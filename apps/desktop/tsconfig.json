@@ -1,0 +1,36 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+    "paths": {
+      "@/*": ["./*"],
+      "@rolodex/types": ["../../packages/types/src/index.ts"]
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "components/**/*.ts",
+    "components/**/*.tsx",
+    "hooks/**/*.ts",
+    "hooks/**/*.tsx",
+    "lib/**/*.ts",
+    "lib/**/*.tsx",
+    "src/**/*.d.ts",
+    "components.json"
+  ],
+  "exclude": [
+    "node_modules",
+    "app",
+    "types",
+    "next-env.d.ts",
+    "next.config.ts",
+    "lib/supabase/server.ts",
+    "lib/supabase/proxy.ts",
+    "lib/auth/get-user.ts",
+    "lib/auth/sync-user.ts"
+  ]
+}

@@ -1,0 +1,9 @@
+node_modules
+.next
+dist
+.turbo
+build
+*.config.js
+*.config.mjs
+*.config.ts
+
