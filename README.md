@@ -30,6 +30,9 @@ cp .env.example .env
 # Install all dependencies
 bun install
 
+# If Electron's binary download was skipped, repair it manually
+bun run electron:install
+
 # Generate Prisma client (must run after schema changes)
 bun run db:generate
 
@@ -43,8 +46,10 @@ bun run db:migrate
 
 ```bash
 # Development
-bun run dev                   # Start desktop + api in parallel
+bun run dev                   # Start desktop + api in Turbo's built-in TUI
 bun run dev:parallel          # Same as dev
+bun run dev:custom            # Start the custom Blessed dashboard from tools/scripts/dev-tui.js
+bun run electron:install      # Reinstall the local Electron binary if desktop dev fails
 
 # Build & Test
 bun run build                 # Build all packages
@@ -64,7 +69,7 @@ bun run db:format             # Format Prisma schema
 
 ## CI Checks
 
-CI runs on pull requests to `main`. To run the same checks locally, you can use:
+CI runs on pull requests to `staging`. To run the same checks locally, you can use:
 
 ```bash
 bun run ci

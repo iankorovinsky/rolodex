@@ -1,22 +1,6 @@
-export const INTEGRATION_TYPES = [
-  'google_calendar',
-  'gmail',
-  'outlook',
-  'whatsapp',
-  'linkedin',
-  'messages',
-] as const;
+export const INTEGRATION_TYPES = ['imessage', 'google', 'outlook', 'granola'] as const;
 
 export type IntegrationType = (typeof INTEGRATION_TYPES)[number];
-
-export interface Integration {
-  id: string;
-  type: IntegrationType;
-  name: string;
-  email?: string;
-  connected: boolean;
-  connectedAt?: string;
-}
 
 export interface IntegrationConfig {
   type: IntegrationType;
@@ -24,6 +8,35 @@ export interface IntegrationConfig {
   description: string;
   icon: string;
   color: string;
+  comingSoon?: boolean;
+}
+
+export interface IntegrationConnection {
+  id: string;
+  type: IntegrationType;
+  connected: boolean;
+  connectedAt?: string | null;
+  lastValidatedAt?: string | null;
+  accountLabel?: string | null;
+  accountEmail?: string | null;
+  toolCount?: number | null;
+  toolNames?: string[];
+}
+
+export interface ConnectGranolaIntegrationRequest {
+  accessToken: string;
+  refreshToken?: string | null;
+  tokenType?: string | null;
+  scope?: string | null;
+  expiresAt?: string | null;
+}
+
+export interface GranolaOAuthResult {
+  accessToken: string;
+  refreshToken?: string | null;
+  tokenType?: string | null;
+  scope?: string | null;
+  expiresAt?: string | null;
 }
 
 export interface UserDeviceToken {
@@ -63,46 +76,34 @@ export interface SyncMessagesRequest {
 }
 
 export const INTEGRATION_CONFIGS: Record<IntegrationType, IntegrationConfig> = {
-  google_calendar: {
-    type: 'google_calendar',
-    label: 'Google Calendar',
-    description: 'Sync your Google Calendar events',
-    icon: 'calendar',
-    color: '#4285F4',
+  imessage: {
+    type: 'imessage',
+    label: 'iMessage',
+    description: 'Sync Apple Messages and Contacts from your Mac',
+    icon: 'message-square',
+    color: '#34C759',
   },
-  gmail: {
-    type: 'gmail',
-    label: 'Gmail',
-    description: 'Connect your Gmail inbox',
+  google: {
+    type: 'google',
+    label: 'Google',
+    description: 'Connect Google Calendar and Gmail',
     icon: 'mail',
-    color: '#EA4335',
+    color: '#4285F4',
+    comingSoon: true,
   },
   outlook: {
     type: 'outlook',
     label: 'Outlook',
-    description: 'Sync Outlook email and calendar',
+    description: 'Connect Outlook email and calendar',
     icon: 'mail',
     color: '#0078D4',
+    comingSoon: true,
   },
-  whatsapp: {
-    type: 'whatsapp',
-    label: 'WhatsApp',
-    description: 'Connect your WhatsApp messages',
-    icon: 'message-circle',
-    color: '#25D366',
-  },
-  linkedin: {
-    type: 'linkedin',
-    label: 'LinkedIn',
-    description: 'Sync your LinkedIn messages and connections',
-    icon: 'linkedin',
-    color: '#0A66C2',
-  },
-  messages: {
-    type: 'messages',
-    label: 'Messages',
-    description: 'Connect Apple Messages',
-    icon: 'message-square',
-    color: '#34C759',
+  granola: {
+    type: 'granola',
+    label: 'Granola',
+    description: 'Connect Granola meeting notes over MCP',
+    icon: 'notebook-tabs',
+    color: '#111827',
   },
 };

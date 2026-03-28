@@ -6,29 +6,61 @@ const contrib = require('blessed-contrib');
 const chokidar = require('chokidar');
 const path = require('path');
 
-// Load root .env file
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
-// Create screen
+const PROCESS_NAMES = ['desktop', 'api', 'trigger', 'db'];
+const PROCESS_COLORS = {
+  desktop: 'cyan',
+  api: 'magenta',
+  trigger: 'yellow',
+  db: 'green',
+};
+const MAX_LOG_LINES = 2000;
+const WHEEL_SCROLL_DELTA = 1;
+const PAGE_SCROLL_DELTA = 15;
+
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log(`Rolodex custom dev TUI
+
+Usage:
+  bun run dev:custom
+  bun run dev:custom --help
+
+Controls:
+  Up / Down       Switch selected process
+  1-4             Jump directly to desktop/api/trigger/db
+  Mouse click     Switch process
+  Mouse wheel     Scroll logs
+  Page Up/Down    Scroll logs faster
+  s               Toggle selection mode
+  Esc             Exit selection mode
+  q / Ctrl-C      Quit
+
+Notes:
+  Selection mode disables terminal mouse capture so text can be selected normally.
+  While selection mode is enabled, mouse clicks are handled by the terminal rather than the TUI.
+`);
+  process.exit(0);
+}
+
 const screen = blessed.screen({
   smartCSR: true,
   title: 'Rolodex Dev',
   fullUnicode: true,
 });
 
-// Create grid layout
 const grid = new contrib.grid({
-  rows: 1,
+  rows: 11,
   cols: 12,
-  screen: screen,
+  screen,
 });
 
-// Left sidebar - process list (2 columns wide)
-const sidebar = grid.set(0, 0, 1, 2, blessed.list, {
+const sidebar = grid.set(0, 0, 11, 2, blessed.list, {
   label: ' Processes ',
   keys: true,
   vi: true,
   mouse: true,
+  clickable: true,
   style: {
     selected: {
       bg: 'blue',
@@ -38,65 +70,44 @@ const sidebar = grid.set(0, 0, 1, 2, blessed.list, {
     item: {
       fg: 'white',
     },
+    border: {
+      fg: 'blue',
+    },
   },
-  items: ['desktop', 'api', 'trigger', 'db'],
+  items: PROCESS_NAMES,
 });
 
-// Right side - log output area (10 columns wide)
-const desktopLog = grid.set(0, 2, 1, 10, contrib.log, {
+const logPane = grid.set(0, 2, 11, 10, blessed.box, {
   label: ' desktop ',
-  fg: 'cyan',
-  selectedFg: 'cyan',
+  tags: false,
+  keys: true,
+  vi: true,
+  mouse: true,
+  clickable: true,
+  scrollable: true,
+  alwaysScroll: true,
+  wrap: true,
+  border: 'line',
+  scrollbar: {
+    ch: ' ',
+    inverse: true,
+  },
   style: {
+    fg: 'white',
     border: {
-      fg: 'cyan',
+      fg: PROCESS_COLORS.desktop,
+    },
+    scrollbar: {
+      bg: 'white',
     },
   },
 });
 
-const apiLog = grid.set(0, 2, 1, 10, contrib.log, {
-  label: ' api ',
-  fg: 'magenta',
-  selectedFg: 'magenta',
-  style: {
-    border: {
-      fg: 'magenta',
-    },
-  },
-});
+let currentView = PROCESS_NAMES[0];
+let selectionMode = false;
+const logBuffers = Object.fromEntries(PROCESS_NAMES.map((name) => [name, []]));
+const scrollOffsets = Object.fromEntries(PROCESS_NAMES.map((name) => [name, 0]));
 
-const triggerLog = grid.set(0, 2, 1, 10, contrib.log, {
-  label: ' trigger ',
-  fg: 'yellow',
-  selectedFg: 'yellow',
-  style: {
-    border: {
-      fg: 'yellow',
-    },
-  },
-});
-
-const dbLog = grid.set(0, 2, 1, 10, contrib.log, {
-  label: ' db ',
-  fg: 'green',
-  selectedFg: 'green',
-  style: {
-    border: {
-      fg: 'green',
-    },
-  },
-});
-
-let currentView = 'desktop';
-const logs = { desktop: desktopLog, api: apiLog, trigger: triggerLog, db: dbLog };
-
-// Show desktop by default
-desktopLog.show();
-apiLog.hide();
-triggerLog.hide();
-dbLog.hide();
-
-// Color helper function
 const colorize = (text, color) => {
   const colors = {
     red: '\x1b[31m',
@@ -107,10 +118,86 @@ const colorize = (text, color) => {
     cyan: '\x1b[36m',
     reset: '\x1b[0m',
   };
+
   return `${colors[color] || ''}${text}${colors.reset}`;
 };
 
-// Spawn processes with inherited env
+const updateChrome = () => {
+  const sidebarHalo = selectionMode ? 'gray' : 'green';
+  const logHalo = selectionMode ? 'green' : 'gray';
+
+  sidebar.style.border.fg = sidebarHalo;
+  sidebar.style.selected.bg = selectionMode ? 'green' : 'blue';
+  logPane.style.border.fg = logHalo;
+  logPane.style.scrollbar.bg = logHalo;
+};
+
+const saveScroll = () => {
+  scrollOffsets[currentView] = logPane.getScroll();
+};
+
+const renderCurrentView = ({ stickToBottom = false } = {}) => {
+  const lines = logBuffers[currentView];
+  logPane.setLabel(` ${currentView} `);
+  logPane.setContent(lines.join('\n'));
+
+  if (stickToBottom) {
+    logPane.setScroll(lines.length);
+    scrollOffsets[currentView] = logPane.getScroll();
+  } else {
+    logPane.setScroll(scrollOffsets[currentView] ?? 0);
+  }
+
+  screen.render();
+};
+
+const appendLogLine = (name, line) => {
+  if (!line.trim()) {
+    return;
+  }
+
+  const wasPinnedToBottom =
+    name === currentView ? logPane.getScrollPerc() >= 99 : false;
+
+  const buffer = logBuffers[name];
+  buffer.push(line);
+
+  if (buffer.length > MAX_LOG_LINES) {
+    buffer.splice(0, buffer.length - MAX_LOG_LINES);
+    if (name !== currentView) {
+      scrollOffsets[name] = Math.max(0, scrollOffsets[name] - 1);
+    }
+  }
+
+  if (name === currentView) {
+    renderCurrentView({ stickToBottom: wasPinnedToBottom });
+  }
+};
+
+const pipeProcessOutput = (name, proc) => {
+  proc.stdout.on('data', (data) => {
+    data
+      .toString()
+      .split('\n')
+      .forEach((line) => appendLogLine(name, line));
+  });
+
+  proc.stderr.on('data', (data) => {
+    data
+      .toString()
+      .split('\n')
+      .forEach((line) => appendLogLine(name, colorize(line, 'red')));
+  });
+
+  proc.on('error', (err) => {
+    appendLogLine(name, colorize(`Error starting ${name}: ${err.message}`, 'red'));
+  });
+
+  proc.on('exit', (code) => {
+    appendLogLine(name, colorize(`Process ${name} exited with code ${code}`, 'yellow'));
+  });
+};
+
 const spawnOpts = { stdio: 'pipe', env: { ...process.env } };
 const processes = {
   desktop: spawn('bun', ['dev'], { ...spawnOpts, cwd: 'apps/desktop' }),
@@ -119,83 +206,108 @@ const processes = {
   db: spawn('bun', ['run', 'generate'], { ...spawnOpts, cwd: 'packages/db' }),
 };
 
-// Handle process errors
 Object.entries(processes).forEach(([name, proc]) => {
-  proc.on('error', (err) => {
-    logs[name].log(colorize(`Error starting ${name}: ${err.message}`, 'red'));
+  pipeProcessOutput(name, proc);
+});
+
+const switchView = (selected) => {
+  if (!PROCESS_NAMES.includes(selected) || selected === currentView) {
+    return;
+  }
+
+  saveScroll();
+  currentView = selected;
+  sidebar.select(PROCESS_NAMES.indexOf(selected));
+  renderCurrentView();
+};
+
+const ensureMouseMode = () => {
+  if (!selectionMode) {
+    return;
+  }
+
+  selectionMode = false;
+  screen.program.enableMouse();
+  updateChrome();
+};
+
+const activateView = (selected) => {
+  switchView(selected);
+  sidebar.focus();
+  screen.render();
+};
+
+sidebar.on('select', (item) => {
+  const selected = item.getText().trim().toLowerCase();
+  switchView(selected);
+});
+
+sidebar.items.forEach((item, index) => {
+  item.on('click', () => {
+    activateView(PROCESS_NAMES[index]);
   });
+});
 
-  proc.on('exit', (code) => {
-    logs[name].log(colorize(`Process ${name} exited with code ${code}`, 'yellow'));
+sidebar.key(['up', 'down'], () => {
+  setImmediate(() => {
+    const selected = PROCESS_NAMES[sidebar.selected] ?? currentView;
+    switchView(selected);
   });
 });
 
-// Pipe output to logs
-processes.desktop.stdout.on('data', (data) => {
-  const lines = data
-    .toString()
-    .split('\n')
-    .filter((line) => line.trim());
-  lines.forEach((line) => desktopLog.log(line));
+logPane.key(['pageup'], () => {
+  logPane.scroll(-PAGE_SCROLL_DELTA);
+  saveScroll();
+  screen.render();
 });
 
-processes.desktop.stderr.on('data', (data) => {
-  const lines = data
-    .toString()
-    .split('\n')
-    .filter((line) => line.trim());
-  lines.forEach((line) => desktopLog.log(colorize(line, 'red')));
+logPane.key(['pagedown'], () => {
+  logPane.scroll(PAGE_SCROLL_DELTA);
+  saveScroll();
+  screen.render();
 });
 
-processes.api.stdout.on('data', (data) => {
-  const lines = data
-    .toString()
-    .split('\n')
-    .filter((line) => line.trim());
-  lines.forEach((line) => apiLog.log(line));
+logPane.on('wheelup', () => {
+  logPane.scroll(-WHEEL_SCROLL_DELTA);
+  saveScroll();
+  screen.render();
 });
 
-processes.api.stderr.on('data', (data) => {
-  const lines = data
-    .toString()
-    .split('\n')
-    .filter((line) => line.trim());
-  lines.forEach((line) => apiLog.log(colorize(line, 'red')));
+logPane.on('wheeldown', () => {
+  logPane.scroll(WHEEL_SCROLL_DELTA);
+  saveScroll();
+  screen.render();
 });
 
-processes.trigger.stdout.on('data', (data) => {
-  const lines = data
-    .toString()
-    .split('\n')
-    .filter((line) => line.trim());
-  lines.forEach((line) => triggerLog.log(line));
+const toggleSelectionMode = () => {
+  selectionMode = !selectionMode;
+
+  if (selectionMode) {
+    screen.program.disableMouse();
+  } else {
+    screen.program.enableMouse();
+  }
+
+  updateChrome();
+  screen.render();
+};
+
+screen.key(['s'], toggleSelectionMode);
+screen.key(['escape'], () => {
+  ensureMouseMode();
+  screen.render();
+});
+screen.key(['1', '2', '3', '4'], (_, key) => {
+  const index = Number(key.full) - 1;
+  const selected = PROCESS_NAMES[index];
+
+  if (!selected) {
+    return;
+  }
+
+  activateView(selected);
 });
 
-processes.trigger.stderr.on('data', (data) => {
-  const lines = data
-    .toString()
-    .split('\n')
-    .filter((line) => line.trim());
-  lines.forEach((line) => triggerLog.log(colorize(line, 'red')));
-});
-
-processes.db.stdout.on('data', (data) => {
-  const lines = data
-    .toString()
-    .split('\n')
-    .filter((line) => line.trim());
-  lines.forEach((line) => dbLog.log(line));
-});
-
-processes.db.stderr.on('data', (data) => {
-  const lines = data
-    .toString()
-    .split('\n')
-    .filter((line) => line.trim());
-  lines.forEach((line) => dbLog.log(colorize(line, 'red')));
-});
-
-// Watch for schema changes and regenerate db
 const schemaWatcher = chokidar.watch('packages/db/prisma/schema/**/*.prisma', {
   ignored: /node_modules/,
   persistent: true,
@@ -203,94 +315,28 @@ const schemaWatcher = chokidar.watch('packages/db/prisma/schema/**/*.prisma', {
 });
 
 schemaWatcher.on('change', (filePath) => {
-  dbLog.log(colorize(`Schema changed: ${path.basename(filePath)}`, 'yellow'));
-  dbLog.log(colorize('Regenerating Prisma client...', 'yellow'));
+  appendLogLine('db', colorize(`Schema changed: ${path.basename(filePath)}`, 'yellow'));
+  appendLogLine('db', colorize('Regenerating Prisma client...', 'yellow'));
 
-  // Kill existing process
   if (processes.db && !processes.db.killed) {
     processes.db.kill();
   }
 
-  // Spawn new generate process
-  processes.db = spawn('bun', ['run', 'generate'], { cwd: 'packages/db', stdio: 'pipe' });
-
-  processes.db.stdout.on('data', (data) => {
-    const lines = data
-      .toString()
-      .split('\n')
-      .filter((line) => line.trim());
-    lines.forEach((line) => dbLog.log(line));
+  processes.db = spawn('bun', ['run', 'generate'], {
+    ...spawnOpts,
+    cwd: 'packages/db',
   });
 
-  processes.db.stderr.on('data', (data) => {
-    const lines = data
-      .toString()
-      .split('\n')
-      .filter((line) => line.trim());
-    lines.forEach((line) => dbLog.log(colorize(line, 'red')));
-  });
-
-  processes.db.on('exit', (code) => {
-    if (code === 0) {
-      dbLog.log(colorize('✓ Prisma client regenerated successfully', 'green'));
-    } else {
-      dbLog.log(colorize(`✗ Prisma client generation failed with code ${code}`, 'red'));
-    }
-  });
+  pipeProcessOutput('db', processes.db);
 });
 
-// Function to switch view
-const switchView = (selected) => {
-  if (selected !== currentView && logs[selected]) {
-    currentView = selected;
-
-    // Hide all logs
-    Object.values(logs).forEach((log) => log.hide());
-
-    // Show selected log
-    logs[currentView].show();
-    screen.render();
-  }
-};
-
-// Handle sidebar selection (for Enter key)
-sidebar.on('select', (item) => {
-  const selected = sidebar.getItem(item).content.trim().toLowerCase();
-  switchView(selected);
-});
-
-// Auto-switch on arrow key navigation
-const items = ['web', 'api', 'trigger', 'db'];
-
-// Wrap the list's move methods to auto-switch
-const originalUp = sidebar.up.bind(sidebar);
-const originalDown = sidebar.down.bind(sidebar);
-
-sidebar.up = function () {
-  const oldIndex = this.selected;
-  originalUp();
-  if (this.selected !== oldIndex) {
-    switchView(items[this.selected]);
-  }
-};
-
-sidebar.down = function () {
-  const oldIndex = this.selected;
-  originalDown();
-  if (this.selected !== oldIndex) {
-    switchView(items[this.selected]);
-  }
-};
-
-// Focus sidebar for navigation
-sidebar.focus();
-
-// Quit handler
 const quit = () => {
-  // Kill all processes
+  schemaWatcher.close().catch(() => {});
+
   Object.values(processes).forEach((proc) => {
     proc.kill('SIGTERM');
   });
+
   setTimeout(() => {
     Object.values(processes).forEach((proc) => {
       proc.kill('SIGKILL');
@@ -301,6 +347,7 @@ const quit = () => {
 
 screen.key(['q', 'C-c'], quit);
 
-// Initial selection
+sidebar.focus();
 sidebar.select(0);
-screen.render();
+updateChrome();
+renderCurrentView({ stickToBottom: true });

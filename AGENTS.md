@@ -13,8 +13,9 @@
 ## Build, Test, and Development Commands
 
 - `bun install`: install workspace dependencies.
-- `bun run dev`: launch desktop + api development.
-- `bun run dev:parallel`: run desktop + api via Turborepo.
+- `bun run dev`: launch desktop + api development in Turbo's built-in TUI.
+- `bun run dev:parallel`: same as `bun run dev`.
+- `bun run dev:custom`: launch the custom Blessed dashboard from `tools/scripts/dev-tui.js`.
 - `bun run build`: build all packages/apps.
 - `bun run typecheck`: typecheck all packages.
 - `bun run lint`: run ESLint across the repo.
@@ -52,7 +53,7 @@
 
 - The app is segmented per-user; ensure data access and UI behavior respect user boundaries.
 - Prefer concise, MVP-focused solutions over overcomplicated designs.
-- Trigger.dev tasks live in `packages/jobs/src/` with config in `trigger.config.ts`. Deploys happen on push to `main` and require `TRIGGER_ACCESS_TOKEN`.
+- Trigger.dev tasks live in `packages/jobs/src/` with config in `trigger.config.ts`. Deploys happen on push to `staging` and require `TRIGGER_ACCESS_TOKEN`.
 
 ## Configuration Notes
 

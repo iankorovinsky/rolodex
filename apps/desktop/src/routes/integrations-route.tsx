@@ -1,66 +1,143 @@
 import { useEffect, useState } from 'react';
 import { Copy, RefreshCw, Trash2 } from 'lucide-react';
+import { IntegrationCard } from '@/components/integrations/integration-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
+  connectGranolaIntegration,
   createDeviceToken,
+  disconnectIntegration,
   getDeviceTokens,
   getIMessageSyncStatus,
+  getIntegrations,
   revokeDeviceToken,
 } from '@/lib/rolodex/api';
-import type { IMessageSyncStatus, UserDeviceToken } from '@rolodex/types';
+import {
+  INTEGRATION_CONFIGS,
+  type IMessageSyncStatus,
+  type IntegrationConnection,
+  type IntegrationType,
+  type UserDeviceToken,
+} from '@rolodex/types';
 
 const formatTimestamp = (value?: string | null) =>
   value ? new Date(value).toLocaleString() : 'Never';
 
 const apiUrl = import.meta.env.API_URL || '';
 
+const integrationOrder: IntegrationType[] = ['granola', 'google', 'outlook', 'imessage'];
+
 export function IntegrationsRoute() {
   const runnerSupported = window.rolodexDesktop?.runnerSupported ?? false;
   const desktopPlatform = window.rolodexDesktop?.platform ?? 'unknown';
+  const [integrations, setIntegrations] = useState<IntegrationConnection[]>([]);
   const [deviceTokens, setDeviceTokens] = useState<UserDeviceToken[]>([]);
   const [status, setStatus] = useState<IMessageSyncStatus | null>(null);
   const [tokenName, setTokenName] = useState('My MacBook');
   const [revealedToken, setRevealedToken] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [isGranolaConnecting, setIsGranolaConnecting] = useState(false);
+  const [disconnectingType, setDisconnectingType] = useState<IntegrationType | null>(null);
 
   const load = async () => {
     setIsLoading(true);
-    try {
-      if (!runnerSupported) {
-        setDeviceTokens([]);
-        setStatus(null);
-        return;
-      }
+    setErrorMessage(null);
 
-      const [tokens, syncStatus] = await Promise.all([getDeviceTokens(), getIMessageSyncStatus()]);
+    try {
+      const [integrationData, tokens, syncStatus] = await Promise.all([
+        getIntegrations(),
+        runnerSupported ? getDeviceTokens() : Promise.resolve([]),
+        runnerSupported ? getIMessageSyncStatus() : Promise.resolve(null),
+      ]);
+
+      setIntegrations(integrationData);
       setDeviceTokens(tokens);
       setStatus(syncStatus);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to load integrations.');
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    void load().catch((error) => console.error('Failed to load integrations', error));
+    void load();
   }, []);
 
   const handleCreate = async () => {
     setIsCreating(true);
+    setErrorMessage(null);
+
     try {
-      const result = await createDeviceToken({ name: tokenName });
+      const result = await createDeviceToken({ name: tokenName.trim() });
       setRevealedToken(result.token);
       await load();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to create a device token.');
     } finally {
       setIsCreating(false);
     }
   };
 
   const handleRevoke = async (id: string) => {
-    await revokeDeviceToken(id);
-    await load();
+    setErrorMessage(null);
+
+    try {
+      await revokeDeviceToken(id);
+      await load();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : 'Failed to revoke the device token.'
+      );
+    }
   };
+
+  const handleGranolaConnect = async () => {
+    if (!window.rolodexDesktop?.startGranolaOAuth) {
+      setErrorMessage('Granola sign-in is only available from the desktop app.');
+      return;
+    }
+
+    setIsGranolaConnecting(true);
+    setErrorMessage(null);
+
+    try {
+      const oauthResult = await window.rolodexDesktop.startGranolaOAuth();
+      await connectGranolaIntegration(oauthResult);
+      await load();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to connect Granola.');
+    } finally {
+      setIsGranolaConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async (type: IntegrationType) => {
+    setDisconnectingType(type);
+    setErrorMessage(null);
+
+    try {
+      await disconnectIntegration(type);
+      await load();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : `Failed to disconnect ${type}.`);
+    } finally {
+      setDisconnectingType(null);
+    }
+  };
+
+  const connectionByType = new Map(
+    integrations.map((integration) => [integration.type, integration])
+  );
+  const activeDeviceTokens = deviceTokens.filter((token) => !token.revokedAt);
+
+  const iMessageHelperText = runnerSupported
+    ? activeDeviceTokens.length > 0
+      ? `${activeDeviceTokens.length} active runner token${activeDeviceTokens.length === 1 ? '' : 's'}. Last message sync: ${formatTimestamp(status?.messages?.lastSuccessAt)}`
+      : 'Create a runner token below to sync Messages and Contacts from your Mac.'
+    : `Runner setup is disabled on ${desktopPlatform}.`;
 
   const runnerCommand =
     revealedToken && apiUrl
@@ -69,32 +146,86 @@ export function IntegrationsRoute() {
 
   return (
     <div className="flex-1 p-8">
-      <div className="mx-auto max-w-4xl space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
+      <div className="mx-auto max-w-5xl space-y-8">
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-1">
             <h1 className="text-2xl font-semibold">Integrations</h1>
             <p className="text-sm text-muted-foreground">
-              Manage device tokens and the macOS runner used to sync iMessage data.
+              Connect external sources to Rolodex. Granola is live now; Google and Outlook are
+              scaffolded next.
             </p>
           </div>
-          <Button variant="outline" onClick={() => void load()} disabled={!runnerSupported}>
+          <Button variant="outline" onClick={() => void load()} disabled={isLoading}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
           </Button>
         </div>
 
+        {errorMessage ? (
+          <section className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {errorMessage}
+          </section>
+        ) : null}
+
+        <section className="grid gap-4 md:grid-cols-2">
+          {integrationOrder.map((type) => {
+            const config = INTEGRATION_CONFIGS[type];
+            const connection = connectionByType.get(type);
+
+            if (type === 'granola') {
+              const helperText = connection?.connected
+                ? `Validated ${formatTimestamp(connection.lastValidatedAt)}. ${connection.toolCount ?? 0} MCP tool${connection.toolCount === 1 ? '' : 's'} available.`
+                : 'Uses Granola browser OAuth with the MCP Streamable HTTP endpoint.';
+
+              return (
+                <IntegrationCard
+                  key={type}
+                  config={config}
+                  connection={connection}
+                  helperText={helperText}
+                  isBusy={isGranolaConnecting || disconnectingType === type}
+                  onConnect={() => void handleGranolaConnect()}
+                  onDisconnect={() => void handleDisconnect(type)}
+                />
+              );
+            }
+
+            if (type === 'imessage') {
+              return (
+                <IntegrationCard
+                  key={type}
+                  config={config}
+                  connectLabel="Manage below"
+                  disabled
+                  helperText={iMessageHelperText}
+                />
+              );
+            }
+
+            return (
+              <IntegrationCard
+                key={type}
+                config={config}
+                connectLabel="Coming soon"
+                disabled
+                helperText="The provider scaffold is in place, but the OAuth and sync flow is not implemented yet."
+              />
+            );
+          })}
+        </section>
+
         {!runnerSupported ? (
           <section className="rounded-xl border border-amber-300 bg-amber-50 p-6 text-amber-950">
             <h2 className="text-lg font-medium">Runner unavailable on this device</h2>
             <p className="mt-2 text-sm">
-              The iMessage runner is only supported on macOS. This device reports `{desktopPlatform}`,
-              so Rolodex will not let you create runner tokens or show runner setup actions here.
+              The iMessage runner is only supported on macOS. This device reports `{desktopPlatform}
+              `, so Rolodex will not let you create runner tokens or show runner setup actions here.
             </p>
           </section>
         ) : null}
 
         <section className="rounded-xl border p-6">
-          <h2 className="text-lg font-medium">Sync status</h2>
+          <h2 className="text-lg font-medium">iMessage sync status</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="rounded-lg bg-muted/40 p-4">
               <div className="text-sm font-medium">Contacts</div>
@@ -118,11 +249,11 @@ export function IntegrationsRoute() {
         </section>
 
         <section className="rounded-xl border p-6">
-          <h2 className="text-lg font-medium">Device tokens</h2>
+          <h2 className="text-lg font-medium">iMessage device tokens</h2>
           <div className="mt-4 flex gap-3">
             <Input value={tokenName} onChange={(event) => setTokenName(event.target.value)} />
             <Button
-              onClick={handleCreate}
+              onClick={() => void handleCreate()}
               disabled={!runnerSupported || isCreating || !tokenName.trim()}
             >
               Create token
@@ -188,7 +319,7 @@ export function IntegrationsRoute() {
         </section>
 
         <section className="rounded-xl border p-6">
-          <h2 className="text-lg font-medium">Runner setup</h2>
+          <h2 className="text-lg font-medium">iMessage runner setup</h2>
           <div className="mt-4 space-y-2 text-sm text-muted-foreground">
             {runnerSupported ? (
               <>
@@ -198,7 +329,10 @@ export function IntegrationsRoute() {
                 <p>4. Grant Full Disk Access so the runner can read Messages `chat.db`.</p>
               </>
             ) : (
-              <p>Runner setup is disabled on non-macOS devices because the sync runner only supports Messages and Contacts on macOS.</p>
+              <p>
+                Runner setup is disabled on non-macOS devices because the sync runner only supports
+                Messages and Contacts on macOS.
+              </p>
             )}
           </div>
         </section>

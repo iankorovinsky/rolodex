@@ -8,8 +8,10 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo run dev --parallel --filter=@rolodex/desktop --filter=@rolodex/api --output-logs=full",
-    "dev:parallel": "turbo run dev --parallel --filter=@rolodex/desktop --filter=@rolodex/api --output-logs=full",
+    "postinstall": "node ./tools/scripts/install-electron.mjs",
+    "dev": "turbo run dev --ui=tui --parallel --filter=@rolodex/desktop --filter=@rolodex/api",
+    "dev:parallel": "turbo run dev --ui=tui --parallel --filter=@rolodex/desktop --filter=@rolodex/api",
+    "dev:custom": "node ./tools/scripts/dev-tui.js",
     "build": "turbo run build --output-logs=full",
     "typecheck": "turbo run typecheck --output-logs=full",
     "lint": "turbo run lint --output-logs=full",
@@ -22,12 +24,14 @@
     "db:migrate": "turbo run migrate:dev --filter=@rolodex/db",
     "db:studio": "turbo run studio --filter=@rolodex/db",
     "db:format": "turbo run format --filter=@rolodex/db",
+    "electron:install": "node ./tools/scripts/install-electron.mjs",
     "imessage-sync": "bun ./packages/imessage-sync/src/index.ts",
     "trigger:dev": "dotenv -e .env -- bunx trigger.dev@4.3.3 dev",
     "trigger:deploy": "dotenv -e .env -- bunx trigger.dev@4.3.3 deploy"
   },
   "devDependencies": {
     "@prisma/client": "^6.0.0",
+    "@tailwindcss/vite": "^4.2.1",
     "@trigger.dev/sdk": "4.3.3",
     "blessed": "^0.1.81",
     "blessed-contrib": "^4.11.0",

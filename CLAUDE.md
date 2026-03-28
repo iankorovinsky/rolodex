@@ -18,8 +18,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Install dependencies
 bun install
 
-# Development (starts desktop + api)
+# Development (starts desktop + api in Turbo's built-in TUI)
 bun run dev
+
+# Custom dev dashboard (Blessed UI in tools/scripts/dev-tui.js)
+bun run dev:custom
 
 # Build all packages
 bun run build
@@ -63,7 +66,7 @@ bun run trigger:deploy # Deploy tasks to Trigger.dev cloud
 
 Tasks are defined in `packages/jobs/src/`. Config is in `trigger.config.ts`.
 
-Auto-deploys on push to `main` via GitHub Actions (requires `TRIGGER_ACCESS_TOKEN` secret).
+Auto-deploys on push to `staging` via GitHub Actions (requires `TRIGGER_ACCESS_TOKEN` secret).
 
 ### Running Single App/Package
 

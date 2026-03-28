@@ -2,6 +2,7 @@
 
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LogOut, ChevronsUpDown, Plug, BookUser } from 'lucide-react';
+import type { AvatarIdValue } from '@rolodex/types';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Sidebar,
   SidebarContent,
@@ -26,6 +27,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAuth } from '@/lib/auth/auth-context';
+import { getAvatarOption } from '@/lib/user/avatar';
 
 interface NavSubItem {
   href: string;
@@ -52,6 +54,7 @@ interface AppSidebarProps {
     id: string;
     email: string;
     name: string | null;
+    avatarId: AvatarIdValue | null;
   };
 }
 
@@ -59,6 +62,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const avatar = getAvatarOption(user.avatarId);
 
   const handleLogout = async () => {
     await signOut();
@@ -165,44 +169,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
           <DropdownMenuTrigger asChild>
             <button className="flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent">
               <Avatar className="h-8 w-8 shrink-0">
-                <AvatarFallback className="bg-sky-500">
-                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
-                    <circle cx="12" cy="12" r="4" fill="#854d0e" />
-                    <g fill="#facc15">
-                      <ellipse cx="12" cy="4" rx="2" ry="3" />
-                      <ellipse cx="12" cy="20" rx="2" ry="3" />
-                      <ellipse cx="4" cy="12" rx="3" ry="2" />
-                      <ellipse cx="20" cy="12" rx="3" ry="2" />
-                      <ellipse
-                        cx="6.34"
-                        cy="6.34"
-                        rx="2"
-                        ry="3"
-                        transform="rotate(-45 6.34 6.34)"
-                      />
-                      <ellipse
-                        cx="17.66"
-                        cy="17.66"
-                        rx="2"
-                        ry="3"
-                        transform="rotate(-45 17.66 17.66)"
-                      />
-                      <ellipse
-                        cx="6.34"
-                        cy="17.66"
-                        rx="2"
-                        ry="3"
-                        transform="rotate(45 6.34 17.66)"
-                      />
-                      <ellipse
-                        cx="17.66"
-                        cy="6.34"
-                        rx="2"
-                        ry="3"
-                        transform="rotate(45 17.66 6.34)"
-                      />
-                    </g>
-                  </svg>
+                <AvatarImage src={avatar.src} alt={avatar.label} />
+                <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground">
+                  {avatar.label.slice(0, 1)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">

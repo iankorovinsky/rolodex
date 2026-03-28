@@ -1,3 +1,5 @@
+import type { GranolaOAuthResult } from '@rolodex/types';
+
 export {};
 
 declare global {
@@ -5,6 +7,7 @@ declare global {
     rolodexDesktop?: {
       platform: NodeJS.Platform;
       runnerSupported: boolean;
+      startGranolaOAuth: () => Promise<GranolaOAuthResult>;
     };
   }
 }

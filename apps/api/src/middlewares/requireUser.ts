@@ -3,8 +3,15 @@ import type { ApiResponse } from '@rolodex/types';
 import { prisma } from '@rolodex/db';
 import { extractBearerToken, hashDeviceToken, verifySupabaseAccessToken } from '../utils/auth';
 
+interface AuthenticatedSupabaseUser {
+  id: string;
+  email: string;
+  name: string | null;
+}
+
 export interface AuthenticatedRequest extends Request {
   userId: string;
+  authUser: AuthenticatedSupabaseUser;
 }
 
 export interface DeviceAuthenticatedRequest extends Request {
@@ -35,6 +42,11 @@ export const requireUser = async (req: Request, res: Response, next: NextFunctio
   try {
     const user = await verifySupabaseAccessToken(token);
     (req as AuthenticatedRequest).userId = user.id;
+    (req as AuthenticatedRequest).authUser = {
+      id: user.id,
+      email: user.email || '',
+      name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+    };
     next();
   } catch {
     unauthorized(res, 'Invalid bearer token.');

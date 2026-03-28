@@ -1,15 +1,8 @@
-import { Navigate, Link } from 'react-router-dom';
-import { SignupForm } from '@/components/auth/signup-form';
+import { Link } from 'react-router-dom';
+import { ForgotPasswordForm } from '@/components/auth/forgot-password-form';
 import AsciiBackground from '@/components/layout/ascii-background';
-import { useAuth } from '@/lib/auth/auth-context';
 
-export function SignupRoute() {
-  const { user, loading } = useAuth();
-
-  if (!loading && user) {
-    return <Navigate to="/app" replace />;
-  }
-
+export function ForgotPasswordRoute() {
   return (
     <div className="relative flex min-h-screen flex-col bg-black">
       <AsciiBackground />
@@ -23,7 +16,7 @@ export function SignupRoute() {
               </h1>
             </Link>
           </div>
-          <SignupForm />
+          <ForgotPasswordForm />
         </div>
       </main>
     </div>

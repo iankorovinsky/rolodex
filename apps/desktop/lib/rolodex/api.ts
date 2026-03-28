@@ -1,5 +1,7 @@
 import type {
   ApiResponse,
+  AvatarIdValue,
+  ConnectGranolaIntegrationRequest,
   Person,
   Tag,
   Request,
@@ -16,6 +18,10 @@ import type {
   CreateUserDeviceTokenRequest,
   CreateUserDeviceTokenResponse,
   IMessageSyncStatus,
+  IntegrationConnection,
+  IntegrationType,
+  UpdateUserProfileRequest,
+  UserProfile,
   UserDeviceToken,
 } from '@rolodex/types';
 import { createClient } from '@/lib/supabase/client';
@@ -180,4 +186,38 @@ export async function revokeDeviceToken(id: string): Promise<void> {
 
 export async function getIMessageSyncStatus(): Promise<IMessageSyncStatus> {
   return fetchApi<IMessageSyncStatus>('/api/integrations/imessage/status');
+}
+
+export async function getIntegrations(): Promise<IntegrationConnection[]> {
+  return fetchApi<IntegrationConnection[]>('/api/integrations');
+}
+
+export async function connectGranolaIntegration(
+  data: ConnectGranolaIntegrationRequest
+): Promise<IntegrationConnection> {
+  return fetchApi<IntegrationConnection>('/api/integrations/granola/connect', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function disconnectIntegration(type: IntegrationType): Promise<void> {
+  await fetchApi(`/api/integrations/${type}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function getCurrentUser(): Promise<UserProfile> {
+  return fetchApi<UserProfile>('/api/users/me');
+}
+
+export async function updateCurrentUserProfile(
+  data: UpdateUserProfileRequest
+): Promise<UserProfile> {
+  const body: UpdateUserProfileRequest = data;
+
+  return fetchApi<UserProfile>('/api/users/me', {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
 }

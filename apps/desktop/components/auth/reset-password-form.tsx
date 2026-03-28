@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Check, Circle } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
@@ -36,22 +36,43 @@ const PASSWORD_REQUIREMENTS = [
   },
 ] as const;
 
-export function SignupForm() {
-  const [email, setEmail] = useState('');
+export function ResetPasswordForm() {
+  const navigate = useNavigate();
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setReady(Boolean(data.session));
+      })
+      .catch(() => {
+        setReady(false);
+      });
+  }, []);
+
   const passwordChecks = PASSWORD_REQUIREMENTS.map((requirement) => ({
     ...requirement,
     met: requirement.test(password),
   }));
   const passwordIsValid = passwordChecks.every((requirement) => requirement.met);
 
-  const handleEmailSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError(null);
     setMessage(null);
+
+    if (!ready) {
+      setError('Open this page from the password reset link in your email.');
+      return;
+    }
 
     if (!passwordIsValid) {
       setError(
@@ -60,51 +81,46 @@ export function SignupForm() {
       return;
     }
 
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
     setLoading(true);
 
-    const supabase = createClient();
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    try {
+      const supabase = createClient();
+      const { error: updateError } = await supabase.auth.updateUser({
+        password,
+      });
 
-    if (error) {
-      setError(error.message);
+      if (updateError) {
+        setError(updateError.message);
+        setLoading(false);
+        return;
+      }
+
+      setMessage('Password updated. Redirecting to sign in...');
       setLoading(false);
-      return;
-    }
-
-    if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-      setError('An account with this email already exists. Try signing in or resetting your password.');
+      window.setTimeout(() => {
+        navigate('/login', { replace: true });
+      }, 1200);
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : 'Unable to update password.');
       setLoading(false);
-      return;
     }
-
-    setMessage('Check your email for a confirmation link.');
-    setLoading(false);
   };
 
   return (
     <div className="space-y-6">
-      <form onSubmit={handleEmailSignup} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Input
-            id="email"
-            type="email"
-            placeholder="you@hackthenorth.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="border-white/20 bg-white/12 text-white placeholder:text-white/70 focus-visible:border-white/70 focus-visible:ring-white/35"
-          />
-        </div>
-        <div className="space-y-2">
-          <Input
-            id="password"
+            id="new-password"
             type="password"
-            placeholder="b3sT-h4ck4th0n-EveR!"
+            placeholder="new password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(event) => setPassword(event.target.value)}
             required
             minLength={8}
             className="border-white/20 bg-white/12 text-white placeholder:text-white/70 focus-visible:border-white/70 focus-visible:ring-white/35"
@@ -128,6 +144,18 @@ export function SignupForm() {
             })}
           </div>
         </div>
+        <div className="space-y-2">
+          <Input
+            id="confirm-password"
+            type="password"
+            placeholder="confirm password"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            required
+            minLength={8}
+            className="border-white/20 bg-white/12 text-white placeholder:text-white/70 focus-visible:border-white/70 focus-visible:ring-white/35"
+          />
+        </div>
         {error && <p className="text-sm text-red-300">{error}</p>}
         {message && <p className="text-sm text-emerald-300">{message}</p>}
         <Button
@@ -135,12 +163,12 @@ export function SignupForm() {
           className="w-full bg-white text-black hover:bg-white/90"
           disabled={loading || !passwordIsValid}
         >
-          {loading ? 'creating account...' : 'create account'}
+          {loading ? 'updating...' : 'update password'}
         </Button>
       </form>
 
       <p className="text-center text-sm text-white/88">
-        already have an account?{' '}
+        back to{' '}
         <Link to="/login" className="font-medium text-white underline decoration-white/50 underline-offset-4">
           sign in
         </Link>

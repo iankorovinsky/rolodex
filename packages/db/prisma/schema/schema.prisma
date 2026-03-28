@@ -9,16 +9,38 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum AvatarId {
+  CAT
+  PANDA
+  BUNNY
+  BEAR
+  GORILLA
+  DUCK
+  GIRAFFE
+  PENGUIN
+  SHARK
+  DRAGON
+}
+
+enum IntegrationProvider {
+  IMESSAGE
+  GOOGLE
+  OUTLOOK
+  GRANOLA
+}
+
 model User {
-  id        String   @id @db.Uuid
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  people    Person[]
-  tags      Tag[]
-  syncCursors UserSyncCursor[]
+  id           String            @id @db.Uuid
+  email        String            @unique
+  name         String?
+  avatarId     AvatarId?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  people       Person[]
+  tags         Tag[]
+  syncCursors  UserSyncCursor[]
   deviceTokens UserDeviceToken[]
+  integrations UserIntegration[]
 
   @@map("users")
 }
@@ -57,7 +79,7 @@ model Person {
 
 model PersonPhone {
   id          String   @id @default(uuid()) @db.Uuid
-  personId     String   @db.Uuid
+  personId    String   @db.Uuid
   phoneNumber String
   isPrimary   Boolean  @default(false)
   createdAt   DateTime @default(now())
@@ -89,7 +111,7 @@ model PersonEmail {
 
 model MessageEvent {
   id        String           @id @default(uuid()) @db.Uuid
-  personId  String           @db.Uuid @unique
+  personId  String           @unique @db.Uuid
   body      String?          @db.Text
   sentAt    DateTime
   direction MessageDirection
@@ -103,13 +125,13 @@ model MessageEvent {
 }
 
 model UserSyncCursor {
-  id            String   @id @default(uuid()) @db.Uuid
-  userId        String   @db.Uuid
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @db.Uuid
   source        String
   cursor        String?
   lastSuccessAt DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -119,18 +141,42 @@ model UserSyncCursor {
 }
 
 model UserDeviceToken {
-  id         String   @id @default(uuid()) @db.Uuid
-  userId     String   @db.Uuid
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
   name       String
-  tokenHash  String   @unique
+  tokenHash  String    @unique
   lastUsedAt DateTime?
   revokedAt  DateTime?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revokedAt])
   @@map("user_device_tokens")
+}
+
+model UserIntegration {
+  id              String              @id @default(uuid()) @db.Uuid
+  userId          String              @db.Uuid
+  provider        IntegrationProvider
+  accountLabel    String?
+  accountEmail    String?
+  accessToken     String?
+  refreshToken    String?
+  tokenScope      String?
+  tokenExpiresAt  DateTime?
+  connectedAt     DateTime?
+  lastValidatedAt DateTime?
+  metadata        Json?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  disconnectedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId, disconnectedAt])
+  @@map("user_integrations")
 }
 
 model PersonEmailEvent {

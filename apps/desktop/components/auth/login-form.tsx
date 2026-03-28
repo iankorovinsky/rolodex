@@ -18,19 +18,25 @@ export function LoginForm() {
     setLoading(true);
     setError(null);
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      setError(error.message);
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+        return;
+      }
+
       setLoading(false);
-      return;
+      navigate('/app', { replace: true });
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : 'Unable to sign in.');
+      setLoading(false);
     }
-
-    navigate('/app', { replace: true });
   };
 
   return (
@@ -40,38 +46,46 @@ export function LoginForm() {
           <Input
             id="email"
             type="email"
-            placeholder="you@example.com"
+            placeholder="you@hackthenorth.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="text-white border-white/50 bg-white/10 placeholder:text-white/60 focus-visible:border-white focus-visible:ring-white/50"
+            className="border-white/20 bg-white/12 text-white placeholder:text-white/70 focus-visible:border-white/70 focus-visible:ring-white/35"
           />
         </div>
         <div className="space-y-2">
           <Input
             id="password"
             type="password"
-            placeholder="Your password"
+            placeholder="b3sT-h4ck4th0n-EveR!"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="text-white border-white/50 bg-white/10 placeholder:text-white/60 focus-visible:border-white focus-visible:ring-white/50"
+            className="border-white/20 bg-white/12 text-white placeholder:text-white/70 focus-visible:border-white/70 focus-visible:ring-white/35"
           />
         </div>
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="text-sm text-red-300">{error}</p>}
         <Button
           type="submit"
           className="w-full bg-white text-black hover:bg-white/90"
           disabled={loading}
         >
-          {loading ? 'Signing in...' : 'Sign in'}
+          {loading ? 'signing in...' : 'sign in'}
         </Button>
       </form>
 
-      <p className="text-center text-sm text-white">
-        Don&apos;t have an account?{' '}
-        <Link to="/signup" className="font-medium underline text-white">
-          Sign up
+      <p className="text-center text-sm text-white/88">
+        don&apos;t have an account?{' '}
+        <Link to="/signup" className="font-medium text-white underline decoration-white/50 underline-offset-4">
+          sign up
+        </Link>
+      </p>
+      <p className="text-center text-sm text-white/72">
+        <Link
+          to="/forgot-password"
+          className="font-medium text-white underline decoration-white/40 underline-offset-4"
+        >
+          forgot your password?
         </Link>
       </p>
     </div>
