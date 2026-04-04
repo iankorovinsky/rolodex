@@ -2,6 +2,7 @@ import type {
   ApiResponse,
   AvatarIdValue,
   ConnectGranolaIntegrationRequest,
+  ConnectOAuthIntegrationRequest,
   Person,
   Tag,
   Request,
@@ -14,13 +15,18 @@ import type {
   CreateRequestRequest,
   UpdateRequestRequest,
   CreatePersonNoteRequest,
+  CreateScoutRequest,
   PeopleQueryParams,
   CreateUserDeviceTokenRequest,
   CreateUserDeviceTokenResponse,
   IMessageSyncStatus,
   IntegrationConnection,
   IntegrationType,
+  OAuthIntegrationType,
+  Scout,
+  ScoutRunResponse,
   UpdateUserProfileRequest,
+  UpdateScoutRequest,
   UserProfile,
   UserDeviceToken,
 } from '@rolodex/types';
@@ -201,8 +207,18 @@ export async function connectGranolaIntegration(
   });
 }
 
-export async function disconnectIntegration(type: IntegrationType): Promise<void> {
-  await fetchApi(`/api/integrations/${type}`, {
+export async function connectOAuthIntegration(
+  type: OAuthIntegrationType,
+  data: ConnectOAuthIntegrationRequest
+): Promise<IntegrationConnection> {
+  return fetchApi<IntegrationConnection>(`/api/integrations/${type}/connect`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function disconnectIntegration(id: string): Promise<void> {
+  await fetchApi(`/api/integrations/connection/${id}`, {
     method: 'DELETE',
   });
 }
@@ -219,5 +235,51 @@ export async function updateCurrentUserProfile(
   return fetchApi<UserProfile>('/api/users/me', {
     method: 'PATCH',
     body: JSON.stringify(body),
+  });
+}
+
+export async function getScouts(): Promise<Scout[]> {
+  return fetchApi<Scout[]>('/api/scouts');
+}
+
+export async function getScoutById(id: string): Promise<Scout> {
+  return fetchApi<Scout>(`/api/scouts/${id}`);
+}
+
+export async function createScout(data: CreateScoutRequest): Promise<Scout> {
+  return fetchApi<Scout>('/api/scouts', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateScout(id: string, data: UpdateScoutRequest): Promise<Scout> {
+  return fetchApi<Scout>(`/api/scouts/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteScout(id: string): Promise<void> {
+  await fetchApi(`/api/scouts/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function pauseScout(id: string): Promise<Scout> {
+  return fetchApi<Scout>(`/api/scouts/${id}/pause`, {
+    method: 'POST',
+  });
+}
+
+export async function resumeScout(id: string): Promise<Scout> {
+  return fetchApi<Scout>(`/api/scouts/${id}/resume`, {
+    method: 'POST',
+  });
+}
+
+export async function runScout(id: string): Promise<ScoutRunResponse> {
+  return fetchApi<ScoutRunResponse>(`/api/scouts/${id}/run`, {
+    method: 'POST',
   });
 }

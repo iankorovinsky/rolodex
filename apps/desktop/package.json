@@ -78,7 +78,7 @@
     "asar": true,
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "mac": {
-      "icon": "public/app-icon.icns",
+      "icon": "public/app-icon/app-icon.icns",
       "category": "public.app-category.productivity",
       "target": [
         "dmg",
@@ -86,14 +86,14 @@
       ]
     },
     "win": {
-      "icon": "public/app-icon.ico",
+      "icon": "public/app-icon/app-icon.ico",
       "target": [
         "nsis",
         "portable"
       ]
     },
     "linux": {
-      "icon": "public/app-icon.png",
+      "icon": "public/app-icon/app-icon.png",
       "target": [
         "AppImage",
         "deb"

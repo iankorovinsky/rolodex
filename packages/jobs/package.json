@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "dotenv -e ../../.env -- bunx trigger.dev@4.3.3 dev",
     "deploy": "dotenv -e ../../.env -- bunx trigger.dev@4.3.3 deploy",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
     "@trigger.dev/sdk": "4.3.3",

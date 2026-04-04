@@ -4,6 +4,7 @@ import itemRoutes from './routes/itemRoutes';
 import rolodexRoutes from './routes/rolodex';
 import integrationsRoutes from './routes/integrations';
 import userRoutes from './routes/userRoutes';
+import scoutRoutes from './routes/scouts';
 import { errorHandler } from './middlewares/errorHandler';
 
 const app = express();
@@ -53,6 +54,7 @@ app.use('/api/items', itemRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/rolodex', rolodexRoutes);
 app.use('/api/integrations', integrationsRoutes);
+app.use('/api/scouts', scoutRoutes);
 
 app.use(errorHandler);
 

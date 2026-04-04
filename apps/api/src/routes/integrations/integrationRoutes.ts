@@ -11,6 +11,6 @@ const router = Router();
 router.use(requireUser);
 router.get('/', listIntegrationsHandler);
 router.post('/:type/connect', connectIntegrationHandler);
-router.delete('/:type', disconnectIntegrationHandler);
+router.delete('/connection/:id', disconnectIntegrationHandler);
 
 export default router;

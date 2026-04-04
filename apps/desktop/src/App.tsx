@@ -9,8 +9,9 @@ import { ForgotPasswordRoute } from './routes/forgot-password-route';
 import { ResetPasswordRoute } from './routes/reset-password-route';
 import { DashboardRoute } from './routes/dashboard-route';
 import { PersonRoute } from './routes/person-route';
-import { IntegrationsRoute } from './routes/integrations-route';
 import { AvatarOnboardingRoute } from './routes/avatar-onboarding-route';
+import { SettingsRoute } from './routes/settings-route';
+import { ScoutsRoute } from './routes/scouts-route';
 
 function AppLoadingShell() {
   return (
@@ -94,8 +95,11 @@ export function App() {
         <Route element={<ProtectedLayout />}>
           <Route path="/app/onboarding/avatar" element={<AvatarOnboardingRoute />} />
           <Route path="/app" element={<DashboardRoute />} />
+          <Route path="/app/scouts" element={<ScoutsRoute />} />
           <Route path="/app/:id" element={<PersonRoute />} />
-          <Route path="/app/integrations" element={<IntegrationsRoute />} />
+          <Route path="/app/settings" element={<SettingsRoute />} />
+          <Route path="/app/profile" element={<SettingsRoute />} />
+          <Route path="/app/integrations" element={<SettingsRoute />} />
         </Route>
       </Routes>
     </AuthProvider>

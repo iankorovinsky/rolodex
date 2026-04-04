@@ -22,8 +22,9 @@ export default [
         global: 'readonly',
         describe: 'readonly',
         it: 'readonly',
+        test: 'readonly',
         expect: 'readonly',
-        jest: 'readonly',
+        mock: 'readonly',
         beforeEach: 'readonly',
         afterEach: 'readonly',
       },
@@ -43,4 +44,3 @@ export default [
     },
   },
 ];
-

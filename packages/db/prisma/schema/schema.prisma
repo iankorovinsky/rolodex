@@ -29,6 +29,12 @@ enum IntegrationProvider {
   GRANOLA
 }
 
+enum IntegrationConnectionStatus {
+  ACTIVE
+  REFRESH_FAILED
+  RECONNECT_REQUIRED
+}
+
 model User {
   id           String            @id @db.Uuid
   email        String            @unique
@@ -41,6 +47,7 @@ model User {
   syncCursors  UserSyncCursor[]
   deviceTokens UserDeviceToken[]
   integrations UserIntegration[]
+  scouts       Scout[]
 
   @@map("users")
 }
@@ -156,25 +163,31 @@ model UserDeviceToken {
 }
 
 model UserIntegration {
-  id              String              @id @default(uuid()) @db.Uuid
-  userId          String              @db.Uuid
-  provider        IntegrationProvider
-  accountLabel    String?
-  accountEmail    String?
-  accessToken     String?
-  refreshToken    String?
-  tokenScope      String?
-  tokenExpiresAt  DateTime?
-  connectedAt     DateTime?
-  lastValidatedAt DateTime?
-  metadata        Json?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  disconnectedAt  DateTime?
+  id                   String                      @id @default(uuid()) @db.Uuid
+  userId               String                      @db.Uuid
+  provider             IntegrationProvider
+  externalAccountId    String?
+  accountLabel         String?
+  accountEmail         String?
+  accessToken          String?
+  refreshToken         String?
+  tokenScope           String?
+  tokenExpiresAt       DateTime?
+  connectedAt          DateTime?
+  lastValidatedAt      DateTime?
+  connectionStatus     IntegrationConnectionStatus @default(ACTIVE)
+  lastRefreshAt        DateTime?
+  lastRefreshAttemptAt DateTime?
+  lastRefreshError     String?
+  reauthRequiredAt     DateTime?
+  metadata             Json?
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+  disconnectedAt       DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, provider])
+  @@unique([userId, provider, externalAccountId])
   @@index([userId, disconnectedAt])
   @@map("user_integrations")
 }
@@ -317,4 +330,60 @@ enum MessageDirection {
 enum RequestType {
   ASK
   FAVOUR
+}
+
+enum ScoutScheduleUnit {
+  DAY
+  WEEK
+}
+
+enum ScoutWeekday {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+enum ScoutRelevanceWindow {
+  DAY
+  WEEK
+}
+
+enum ScoutStatus {
+  ACTIVE
+  PAUSED
+}
+
+model Scout {
+  id                String               @id @default(uuid()) @db.Uuid
+  userId            String               @db.Uuid
+  name              String
+  topic             String               @db.Text
+  scheduleUnit      ScoutScheduleUnit
+  scheduleInterval  Int
+  scheduleDayOfWeek ScoutWeekday?
+  scheduleTimeLocal String
+  timezone          String
+  scheduleAnchorAt  DateTime
+  relevanceWindow   ScoutRelevanceWindow
+  recipientEmails   Json
+  status            ScoutStatus          @default(ACTIVE)
+  triggerScheduleId String?
+  nextRunAt         DateTime?
+  lastRunAt         DateTime?
+  lastSuccessAt     DateTime?
+  lastFailureAt     DateTime?
+  lastFailureReason String?              @db.Text
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  deletedAt         DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, deletedAt])
+  @@index([userId, status, deletedAt])
+  @@map("scouts")
 }

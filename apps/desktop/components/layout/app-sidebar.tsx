@@ -1,7 +1,7 @@
 'use client';
 
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LogOut, ChevronsUpDown, Plug, BookUser } from 'lucide-react';
+import { LogOut, ChevronsUpDown, Plug, BookUser, Settings, UserRound, Telescope } from 'lucide-react';
 import type { AvatarIdValue } from '@rolodex/types';
 import {
   DropdownMenu,
@@ -47,6 +47,11 @@ const navItems: NavItem[] = [
     label: 'Rolodex',
     icon: BookUser,
   },
+  {
+    href: '/app/scouts',
+    label: 'Scouts',
+    icon: Telescope,
+  },
 ];
 
 interface AppSidebarProps {
@@ -86,7 +91,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
           <span className="text-2xl">🌱</span>
           <div className="group-data-[collapsible=icon]:hidden">
             <div className="font-semibold text-sidebar-foreground">rolodex.</div>
-            <div className="text-xs text-sidebar-foreground/60">Keep your people in context.</div>
+            <div className="text-xs text-sidebar-foreground/60">who. what. when. where. why.</div>
           </div>
         </Link>
       </SidebarHeader>
@@ -189,6 +194,18 @@ export function AppSidebar({ user }: AppSidebarProps) {
             sideOffset={8}
             className="w-[--radix-dropdown-menu-trigger-width] min-w-56"
           >
+            <DropdownMenuItem asChild className="gap-2">
+              <Link to="/app/profile">
+                <UserRound className="h-4 w-4" />
+                Profile
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild className="gap-2">
+              <Link to="/app/settings">
+                <Settings className="h-4 w-4" />
+                Settings
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem asChild className="gap-2">
               <Link to="/app/integrations">
                 <Plug className="h-4 w-4" />

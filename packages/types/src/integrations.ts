@@ -1,6 +1,8 @@
 export const INTEGRATION_TYPES = ['imessage', 'google', 'outlook', 'granola'] as const;
 
 export type IntegrationType = (typeof INTEGRATION_TYPES)[number];
+export type OAuthIntegrationType = Extract<IntegrationType, 'google' | 'outlook'>;
+export type IntegrationConnectionStatus = 'active' | 'refresh_failed' | 'reconnect_required';
 
 export interface IntegrationConfig {
   type: IntegrationType;
@@ -15,8 +17,15 @@ export interface IntegrationConnection {
   id: string;
   type: IntegrationType;
   connected: boolean;
+  connectionStatus: IntegrationConnectionStatus;
+  externalAccountId?: string | null;
   connectedAt?: string | null;
   lastValidatedAt?: string | null;
+  lastRefreshAt?: string | null;
+  lastRefreshAttemptAt?: string | null;
+  lastRefreshError?: string | null;
+  reauthRequiredAt?: string | null;
+  expiresAt?: string | null;
   accountLabel?: string | null;
   accountEmail?: string | null;
   toolCount?: number | null;
@@ -25,18 +34,42 @@ export interface IntegrationConnection {
 
 export interface ConnectGranolaIntegrationRequest {
   accessToken: string;
+  clientId: string;
   refreshToken?: string | null;
   tokenType?: string | null;
   scope?: string | null;
   expiresAt?: string | null;
 }
 
-export interface GranolaOAuthResult {
+export interface ConnectOAuthIntegrationRequest {
   accessToken: string;
   refreshToken?: string | null;
   tokenType?: string | null;
   scope?: string | null;
   expiresAt?: string | null;
+  externalAccountId?: string | null;
+  accountLabel?: string | null;
+  accountEmail?: string | null;
+}
+
+export interface GranolaOAuthResult {
+  accessToken: string;
+  clientId: string;
+  refreshToken?: string | null;
+  tokenType?: string | null;
+  scope?: string | null;
+  expiresAt?: string | null;
+}
+
+export interface ProviderOAuthResult {
+  accessToken: string;
+  refreshToken?: string | null;
+  tokenType?: string | null;
+  scope?: string | null;
+  expiresAt?: string | null;
+  externalAccountId: string;
+  accountLabel?: string | null;
+  accountEmail?: string | null;
 }
 
 export interface UserDeviceToken {
@@ -89,7 +122,6 @@ export const INTEGRATION_CONFIGS: Record<IntegrationType, IntegrationConfig> = {
     description: 'Connect Google Calendar and Gmail',
     icon: 'mail',
     color: '#4285F4',
-    comingSoon: true,
   },
   outlook: {
     type: 'outlook',
@@ -97,7 +129,6 @@ export const INTEGRATION_CONFIGS: Record<IntegrationType, IntegrationConfig> = {
     description: 'Connect Outlook email and calendar',
     icon: 'mail',
     color: '#0078D4',
-    comingSoon: true,
   },
   granola: {
     type: 'granola',

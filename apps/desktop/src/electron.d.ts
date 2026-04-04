@@ -1,4 +1,4 @@
-import type { GranolaOAuthResult } from '@rolodex/types';
+import type { GranolaOAuthResult, OAuthIntegrationType, ProviderOAuthResult } from '@rolodex/types';
 
 export {};
 
@@ -8,6 +8,19 @@ declare global {
       platform: NodeJS.Platform;
       runnerSupported: boolean;
       startGranolaOAuth: () => Promise<GranolaOAuthResult>;
+      startProviderOAuth: (type: OAuthIntegrationType) => Promise<ProviderOAuthResult>;
+      validateIMessagePath: (inputPath: string) => Promise<{
+        path: string;
+        valid: boolean;
+      }>;
+      prepareOAuthCallback: (options: { failureTitle: string; successTitle: string }) => Promise<{
+        callbackId: string;
+        redirectUri: string;
+      }>;
+      completeOAuthCallback: (input: { authUrl: string; callbackId: string }) => Promise<{
+        code: string;
+      }>;
+      cancelOAuthCallback: (callbackId: string) => Promise<void>;
     };
   }
 }

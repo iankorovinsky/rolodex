@@ -1,10 +1,20 @@
-import { IntegrationProvider, Prisma, prisma } from '@rolodex/db';
+import {
+  IntegrationConnectionStatus,
+  IntegrationProvider,
+  Prisma,
+  prisma,
+} from '@rolodex/db';
 import type {
   ConnectGranolaIntegrationRequest,
+  ConnectOAuthIntegrationRequest,
+  IntegrationConnectionStatus as IntegrationConnectionStatusType,
   IntegrationConnection,
   IntegrationType,
+  OAuthIntegrationType,
 } from '@rolodex/types';
 import { createAppError } from '../../utils/errors';
+import { encryptIntegrationToken } from './credentials';
+import { refreshStoredIntegrationTokens } from './tokenManager';
 
 const GRANOLA_MCP_URL = 'https://mcp.granola.ai/mcp';
 const MCP_PROTOCOL_VERSION = '2025-03-26';
@@ -23,11 +33,32 @@ const providerToIntegrationType: Record<IntegrationProvider, IntegrationType> = 
   [IntegrationProvider.GRANOLA]: 'granola',
 };
 
+const oauthIntegrationLabels: Record<OAuthIntegrationType, string> = {
+  google: 'Google',
+  outlook: 'Outlook',
+};
+
+const providerToConnectionStatus: Record<
+  IntegrationConnectionStatus,
+  IntegrationConnectionStatusType
+> = {
+  [IntegrationConnectionStatus.ACTIVE]: 'active',
+  [IntegrationConnectionStatus.REFRESH_FAILED]: 'refresh_failed',
+  [IntegrationConnectionStatus.RECONNECT_REQUIRED]: 'reconnect_required',
+};
+
 const sanitizeIntegration = (integration: {
   id: string;
   provider: IntegrationProvider;
+  externalAccountId: string | null;
   connectedAt: Date | null;
   lastValidatedAt: Date | null;
+  lastRefreshAt: Date | null;
+  lastRefreshAttemptAt: Date | null;
+  lastRefreshError: string | null;
+  reauthRequiredAt: Date | null;
+  tokenExpiresAt: Date | null;
+  connectionStatus: IntegrationConnectionStatus;
   accountLabel: string | null;
   accountEmail: string | null;
   metadata: Prisma.JsonValue;
@@ -44,8 +75,15 @@ const sanitizeIntegration = (integration: {
     id: integration.id,
     type: providerToIntegrationType[integration.provider],
     connected: integration.disconnectedAt === null,
+    connectionStatus: providerToConnectionStatus[integration.connectionStatus],
+    externalAccountId: integration.externalAccountId,
     connectedAt: integration.connectedAt?.toISOString() ?? null,
     lastValidatedAt: integration.lastValidatedAt?.toISOString() ?? null,
+    lastRefreshAt: integration.lastRefreshAt?.toISOString() ?? null,
+    lastRefreshAttemptAt: integration.lastRefreshAttemptAt?.toISOString() ?? null,
+    lastRefreshError: integration.lastRefreshError,
+    reauthRequiredAt: integration.reauthRequiredAt?.toISOString() ?? null,
+    expiresAt: integration.tokenExpiresAt?.toISOString() ?? null,
     accountLabel: integration.accountLabel,
     accountEmail: integration.accountEmail,
     toolCount: typeof metadata.toolCount === 'number' ? metadata.toolCount : null,
@@ -194,6 +232,15 @@ const validateGranolaAccess = async (accessToken: string) => {
   };
 };
 
+const refreshGranolaMetadata = async (accessToken: string, clientId?: string | null) => {
+  const metadata = await validateGranolaAccess(accessToken);
+
+  return {
+    ...metadata,
+    ...(clientId ? { oauthClientId: clientId } : {}),
+  };
+};
+
 export const listUserIntegrations = async (userId: string): Promise<IntegrationConnection[]> => {
   const integrations = await prisma.userIntegration.findMany({
     where: {
@@ -205,7 +252,38 @@ export const listUserIntegrations = async (userId: string): Promise<IntegrationC
     },
   });
 
-  return integrations.map(sanitizeIntegration);
+  const refreshedIntegrations = await Promise.all(
+    integrations.map(async (integration) => {
+      try {
+        return await refreshStoredIntegrationTokens(integration, {
+          onGranolaRefreshed:
+            integration.provider === IntegrationProvider.GRANOLA
+              ? async (accessToken, currentIntegration) => ({
+                  metadata: await refreshGranolaMetadata(
+                    accessToken,
+                    currentIntegration.metadata &&
+                      typeof currentIntegration.metadata === 'object' &&
+                      !Array.isArray(currentIntegration.metadata)
+                      ? ((currentIntegration.metadata as { oauthClientId?: unknown }).oauthClientId as
+                          | string
+                          | undefined)
+                      : undefined
+                  ),
+                  lastValidatedAt: new Date(),
+                })
+              : undefined,
+        });
+      } catch {
+        return prisma.userIntegration.findUniqueOrThrow({
+          where: { id: integration.id },
+        });
+      }
+    })
+  );
+
+  return refreshedIntegrations.map((integration) =>
+    sanitizeIntegration(integration as Parameters<typeof sanitizeIntegration>[0])
+  );
 };
 
 export const connectGranolaIntegration = async (
@@ -216,55 +294,127 @@ export const connectGranolaIntegration = async (
     throw createAppError('Granola access token is required.', 400);
   }
 
-  const metadata = await validateGranolaAccess(input.accessToken);
-  const now = new Date();
+  if (!input.clientId?.trim()) {
+    throw createAppError('Granola client identifier is required.', 400);
+  }
 
-  const integration = await prisma.userIntegration.upsert({
+  const metadata = await refreshGranolaMetadata(input.accessToken, input.clientId);
+  const now = new Date();
+  const existing = await prisma.userIntegration.findFirst({
     where: {
-      userId_provider: {
-        userId,
-        provider: IntegrationProvider.GRANOLA,
-      },
-    },
-    create: {
       userId,
       provider: IntegrationProvider.GRANOLA,
-      accountLabel: 'Granola',
-      accessToken: input.accessToken,
-      refreshToken: input.refreshToken || null,
-      tokenScope: input.scope || null,
-      tokenExpiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
-      connectedAt: now,
-      lastValidatedAt: now,
       disconnectedAt: null,
-      metadata,
-    },
-    update: {
-      accountLabel: 'Granola',
-      accessToken: input.accessToken,
-      refreshToken: input.refreshToken || null,
-      tokenScope: input.scope || null,
-      tokenExpiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
-      connectedAt: now,
-      lastValidatedAt: now,
-      disconnectedAt: null,
-      metadata,
     },
   });
+
+  const data = {
+    accountLabel: 'Granola',
+    accessToken: encryptIntegrationToken(input.accessToken),
+    refreshToken: encryptIntegrationToken(input.refreshToken || null),
+    tokenScope: input.scope || null,
+    tokenExpiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+    connectedAt: now,
+    lastValidatedAt: now,
+    connectionStatus: IntegrationConnectionStatus.ACTIVE,
+    lastRefreshError: null,
+    reauthRequiredAt: null,
+    disconnectedAt: null,
+    metadata,
+  } satisfies Prisma.UserIntegrationUncheckedUpdateInput;
+
+  const integration = existing
+    ? await prisma.userIntegration.update({
+        where: {
+          id: existing.id,
+        },
+        data,
+      })
+    : await prisma.userIntegration.create({
+        data: {
+          userId,
+          provider: IntegrationProvider.GRANOLA,
+          ...data,
+        },
+      });
 
   return sanitizeIntegration(integration);
 };
 
-export const disconnectUserIntegration = async (userId: string, type: IntegrationType) => {
+export const connectOAuthIntegration = async (
+  userId: string,
+  type: OAuthIntegrationType,
+  input: ConnectOAuthIntegrationRequest
+): Promise<IntegrationConnection> => {
   const provider = integrationTypeToProvider[type];
-  if (!provider) {
-    throw createAppError('Unsupported integration type.', 400);
+
+  if (provider !== IntegrationProvider.GOOGLE && provider !== IntegrationProvider.OUTLOOK) {
+    throw createAppError('Unsupported OAuth integration type.', 400);
   }
 
+  if (!input.accessToken?.trim()) {
+    throw createAppError(`${oauthIntegrationLabels[type]} access token is required.`, 400);
+  }
+
+  const now = new Date();
+  const externalAccountId = input.externalAccountId?.trim() || null;
+  if (!externalAccountId) {
+    throw createAppError(`${oauthIntegrationLabels[type]} account identifier is required.`, 400);
+  }
+  const accountEmail = input.accountEmail?.trim() || null;
+  const accountLabel = input.accountLabel?.trim() || accountEmail || oauthIntegrationLabels[type];
+  const existing = externalAccountId
+    ? await prisma.userIntegration.findFirst({
+        where: {
+          userId,
+          provider,
+          externalAccountId,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      })
+    : null;
+
+  const data = {
+    externalAccountId,
+    accountLabel,
+    accountEmail,
+    accessToken: encryptIntegrationToken(input.accessToken),
+    refreshToken: encryptIntegrationToken(input.refreshToken || null),
+    tokenScope: input.scope || null,
+    tokenExpiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+    connectedAt: now,
+    lastValidatedAt: now,
+    connectionStatus: IntegrationConnectionStatus.ACTIVE,
+    lastRefreshError: null,
+    reauthRequiredAt: null,
+    disconnectedAt: null,
+  } satisfies Prisma.UserIntegrationUncheckedUpdateInput;
+
+  const integration = existing
+    ? await prisma.userIntegration.update({
+        where: {
+          id: existing.id,
+        },
+        data,
+      })
+    : await prisma.userIntegration.create({
+        data: {
+          userId,
+          provider,
+          ...data,
+        },
+      });
+
+  return sanitizeIntegration(integration);
+};
+
+export const disconnectUserIntegration = async (userId: string, integrationId: string) => {
   const existing = await prisma.userIntegration.findFirst({
     where: {
       userId,
-      provider,
+      id: integrationId,
       disconnectedAt: null,
     },
     select: {
@@ -285,6 +435,11 @@ export const disconnectUserIntegration = async (userId: string, type: Integratio
       refreshToken: null,
       tokenScope: null,
       tokenExpiresAt: null,
+      connectionStatus: IntegrationConnectionStatus.ACTIVE,
+      lastRefreshAt: null,
+      lastRefreshAttemptAt: null,
+      lastRefreshError: null,
+      reauthRequiredAt: null,
       metadata: Prisma.JsonNull,
       disconnectedAt: new Date(),
     },

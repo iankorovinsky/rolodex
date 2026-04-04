@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   connectGranolaIntegration,
+  connectOAuthIntegration,
   createDeviceToken,
   disconnectIntegration,
   getDeviceTokens,
@@ -17,6 +18,7 @@ import {
   type IMessageSyncStatus,
   type IntegrationConnection,
   type IntegrationType,
+  type OAuthIntegrationType,
   type UserDeviceToken,
 } from '@rolodex/types';
 
@@ -39,7 +41,8 @@ export function IntegrationsRoute() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [isGranolaConnecting, setIsGranolaConnecting] = useState(false);
-  const [disconnectingType, setDisconnectingType] = useState<IntegrationType | null>(null);
+  const [connectingType, setConnectingType] = useState<OAuthIntegrationType | null>(null);
+  const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
 
   const load = async () => {
     setIsLoading(true);
@@ -114,22 +117,67 @@ export function IntegrationsRoute() {
     }
   };
 
-  const handleDisconnect = async (type: IntegrationType) => {
-    setDisconnectingType(type);
+  const handleDisconnect = async (connection: IntegrationConnection) => {
+    setDisconnectingId(connection.id);
     setErrorMessage(null);
 
     try {
-      await disconnectIntegration(type);
+      await disconnectIntegration(connection.id);
       await load();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : `Failed to disconnect ${type}.`);
+      await load().catch(() => undefined);
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : `Failed to disconnect ${INTEGRATION_CONFIGS[connection.type].label}.`
+      );
     } finally {
-      setDisconnectingType(null);
+      setDisconnectingId(null);
     }
   };
 
-  const connectionByType = new Map(
-    integrations.map((integration) => [integration.type, integration])
+  const handleOAuthConnect = async (type: OAuthIntegrationType) => {
+    if (!window.rolodexDesktop?.startProviderOAuth) {
+      setErrorMessage(
+        `${INTEGRATION_CONFIGS[type].label} sign-in is only available from the desktop app.`
+      );
+      return;
+    }
+
+    setConnectingType(type);
+    setErrorMessage(null);
+
+    try {
+      const oauthResult = await window.rolodexDesktop.startProviderOAuth(type);
+
+      await connectOAuthIntegration(type, {
+        accessToken: oauthResult.accessToken,
+        refreshToken: oauthResult.refreshToken ?? null,
+        tokenType: oauthResult.tokenType ?? null,
+        scope: oauthResult.scope ?? null,
+        expiresAt: oauthResult.expiresAt ?? null,
+        externalAccountId: oauthResult.externalAccountId,
+        accountEmail: oauthResult.accountEmail ?? null,
+        accountLabel: oauthResult.accountLabel ?? null,
+      });
+
+      await load();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : `Failed to connect ${INTEGRATION_CONFIGS[type].label}.`
+      );
+    } finally {
+      setConnectingType(null);
+    }
+  };
+
+  const connectionByType = new Map<IntegrationType, IntegrationConnection[]>(
+    integrationOrder.map((type) => [
+      type,
+      integrations.filter((integration) => integration.type === type),
+    ])
   );
   const activeDeviceTokens = deviceTokens.filter((token) => !token.revokedAt);
 
@@ -170,22 +218,31 @@ export function IntegrationsRoute() {
         <section className="grid gap-4 md:grid-cols-2">
           {integrationOrder.map((type) => {
             const config = INTEGRATION_CONFIGS[type];
-            const connection = connectionByType.get(type);
+            const connections = connectionByType.get(type) ?? [];
 
             if (type === 'granola') {
-              const helperText = connection?.connected
-                ? `Validated ${formatTimestamp(connection.lastValidatedAt)}. ${connection.toolCount ?? 0} MCP tool${connection.toolCount === 1 ? '' : 's'} available.`
+              const latestConnection = connections[0];
+              const helperText = latestConnection?.connected
+                ? `${latestConnection.connectionStatus === 'reconnect_required' ? 'Reconnect required.' : latestConnection.connectionStatus === 'refresh_failed' ? 'Token refresh is failing; Rolodex will retry automatically.' : 'Healthy connection.'} Validated ${formatTimestamp(latestConnection.lastValidatedAt)}. Last refresh ${formatTimestamp(latestConnection.lastRefreshAt)}. ${latestConnection.toolCount ?? 0} MCP tool${latestConnection.toolCount === 1 ? '' : 's'} available.`
                 : 'Uses Granola browser OAuth with the MCP Streamable HTTP endpoint.';
 
               return (
                 <IntegrationCard
                   key={type}
                   config={config}
-                  connection={connection}
+                  connections={connections}
+                  connectLabel={connections.length > 0 ? 'Connect another' : 'Connect'}
                   helperText={helperText}
-                  isBusy={isGranolaConnecting || disconnectingType === type}
+                  isBusy={
+                    isGranolaConnecting || connections.some((item) => item.id === disconnectingId)
+                  }
                   onConnect={() => void handleGranolaConnect()}
-                  onDisconnect={() => void handleDisconnect(type)}
+                  onDisconnect={(connectionId) => {
+                    const connection = connections.find((item) => item.id === connectionId);
+                    if (connection) {
+                      void handleDisconnect(connection);
+                    }
+                  }}
                 />
               );
             }
@@ -202,13 +259,28 @@ export function IntegrationsRoute() {
               );
             }
 
+            const helperText =
+              connections.length > 0
+                ? `${connections.length} account${connections.length === 1 ? '' : 's'} connected.`
+                : `Connect one or more ${config.label} accounts to Rolodex.`;
+
             return (
               <IntegrationCard
                 key={type}
                 config={config}
-                connectLabel="Coming soon"
-                disabled
-                helperText="The provider scaffold is in place, but the OAuth and sync flow is not implemented yet."
+                connections={connections}
+                connectLabel={connections.length > 0 ? 'Connect another' : 'Connect'}
+                helperText={helperText}
+                isBusy={
+                  connectingType === type || connections.some((item) => item.id === disconnectingId)
+                }
+                onConnect={() => void handleOAuthConnect(type)}
+                onDisconnect={(connectionId) => {
+                  const connection = connections.find((item) => item.id === connectionId);
+                  if (connection) {
+                    void handleDisconnect(connection);
+                  }
+                }}
               />
             );
           })}
