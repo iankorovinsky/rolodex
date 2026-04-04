@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { Copy, RefreshCw, Trash2 } from 'lucide-react';
 import { IntegrationCard } from '@/components/integrations/integration-card';
 import { Button } from '@/components/ui/button';
@@ -44,7 +44,7 @@ export function IntegrationsRoute() {
   const [connectingType, setConnectingType] = useState<OAuthIntegrationType | null>(null);
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = useEffectEvent(async () => {
     setIsLoading(true);
     setErrorMessage(null);
 
@@ -63,11 +63,11 @@ export function IntegrationsRoute() {
     } finally {
       setIsLoading(false);
     }
-  };
+  });
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
   const handleCreate = async () => {
     setIsCreating(true);
