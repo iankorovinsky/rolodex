@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,21 +16,80 @@ import type { CreatePersonRequest, Person, Tag } from '@rolodex/types';
 import { Separator } from '@radix-ui/react-separator';
 
 interface AddPersonSheetProps {
-  tags: Tag[];
-  onPersonCreated: (person: Person) => void;
+  tags?: Tag[];
+  onPersonCreated?: (person: Person) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  showTrigger?: boolean;
 }
 
-export function AddPersonSheet({ tags, onPersonCreated }: AddPersonSheetProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function AddPersonSheet({
+  tags,
+  onPersonCreated,
+  open,
+  onOpenChange,
+  showTrigger = true,
+}: AddPersonSheetProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [availableTags, setAvailableTags] = useState(tags);
+  const [fetchedTags, setFetchedTags] = useState<Tag[]>([]);
+  const [isTagsLoading, setIsTagsLoading] = useState(false);
+
+  const isOpen = open ?? uncontrolledOpen;
+  const resolvedTags = useMemo(() => tags ?? fetchedTags, [fetchedTags, tags]);
+  const [availableTags, setAvailableTags] = useState<Tag[]>(resolvedTags);
+
+  useEffect(() => {
+    setAvailableTags(resolvedTags);
+  }, [resolvedTags]);
+
+  const setIsOpen = (nextOpen: boolean) => {
+    onOpenChange?.(nextOpen);
+
+    if (open === undefined) {
+      setUncontrolledOpen(nextOpen);
+    }
+  };
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
-      setAvailableTags(tags);
+      setAvailableTags(resolvedTags);
     }
     setIsOpen(nextOpen);
   };
+
+  useEffect(() => {
+    if (tags || !isOpen) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadTags = async () => {
+      setIsTagsLoading(true);
+
+      try {
+        const nextTags = await getTags();
+        if (!isCancelled) {
+          setFetchedTags(nextTags);
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          console.error('Failed to load tags for add person sheet:', error);
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsTagsLoading(false);
+        }
+      }
+    };
+
+    void loadTags();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isOpen, tags]);
 
   const resolveTagIds = async (tagNames: string[] | undefined) => {
     if (!tagNames?.length) {
@@ -102,7 +161,7 @@ export function AddPersonSheet({ tags, onPersonCreated }: AddPersonSheetProps) {
         tagIds,
       };
       const newPerson = await createPerson(payload);
-      onPersonCreated(newPerson);
+      onPersonCreated?.(newPerson);
       setIsOpen(false);
     } catch (error) {
       console.error('Failed to create person:', error);
@@ -113,11 +172,13 @@ export function AddPersonSheet({ tags, onPersonCreated }: AddPersonSheetProps) {
 
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
-      <SheetTrigger asChild>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-        </Button>
-      </SheetTrigger>
+      {showTrigger ? (
+        <SheetTrigger asChild>
+          <Button className="gap-2">
+            <Plus className="h-4 w-4" />
+          </Button>
+        </SheetTrigger>
+      ) : null}
       <SheetContent className="w-full gap-0 overflow-hidden border-l bg-background p-0 sm:max-w-xl">
         <SheetHeader className=" bg-white px-6 py-5 pr-14">
           <SheetTitle className="text-xl">Add Person</SheetTitle>
@@ -129,7 +190,7 @@ export function AddPersonSheet({ tags, onPersonCreated }: AddPersonSheetProps) {
             onSubmit={handleCreatePerson}
             onCancel={() => setIsOpen(false)}
             onTagCreated={(tag) => setAvailableTags((prev) => [...prev, tag].sort((a, b) => a.name.localeCompare(b.name)))}
-            isLoading={isCreating}
+            isLoading={isCreating || isTagsLoading}
           />
         </div>
       </SheetContent>

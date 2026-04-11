@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import type { CommandAction } from '@/commands/types';
 import type {
   CreateScoutRequest,
   Scout,
@@ -20,6 +22,7 @@ import {
 } from '@/lib/rolodex/api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useRegisterCommandActions } from '@/commands/hooks/use-register-command-actions';
 import { CreatableMultiSelect } from '@/components/ui/creatable-multi-select';
 import {
   Dialog,
@@ -107,7 +110,15 @@ function buildPayload(formState: ScoutFormState): CreateScoutRequest {
   };
 }
 
+function hasOpenCreateScoutDialogState(
+  value: unknown
+): value is { openCreateScoutDialog?: boolean } {
+  return typeof value === 'object' && value !== null;
+}
+
 export function ScoutsRoute() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [scouts, setScouts] = useState<Scout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -137,6 +148,15 @@ export function ScoutsRoute() {
 
     void loadScouts();
   }, []);
+
+  useEffect(() => {
+    if (!hasOpenCreateScoutDialogState(location.state) || !location.state.openCreateScoutDialog) {
+      return;
+    }
+
+    openCreateDialog();
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
 
   const orderedScouts = useMemo(
     () =>
@@ -169,6 +189,46 @@ export function ScoutsRoute() {
     setFormError(null);
     setIsDialogOpen(true);
   };
+
+  const commandActions = useMemo<CommandAction[]>(
+    () => [
+      {
+        id: 'page:scouts:new',
+        title: 'New Scout',
+        subtitle: 'Create a scout from the Scouts page',
+        keywords: ['create scout', 'new scout'],
+        group: 'page',
+        kind: 'action',
+        priority: 0,
+        perform: openCreateDialog,
+      },
+      ...orderedScouts.slice(0, 6).flatMap<CommandAction>((scout) => [
+        {
+          id: `page:scout:run:${scout.id}`,
+          title: `Run Scout: ${scout.name}`,
+          subtitle: 'Queue this scout immediately',
+          keywords: ['run scout', scout.topic],
+          group: 'page',
+          kind: 'action',
+          priority: 20,
+          perform: () => handleRunNow(scout),
+        },
+        {
+          id: `page:scout:edit:${scout.id}`,
+          title: `Edit Scout: ${scout.name}`,
+          subtitle: 'Open the scout editor',
+          keywords: ['edit scout', scout.topic],
+          group: 'page',
+          kind: 'action',
+          priority: 30,
+          perform: () => openEditDialog(scout),
+        },
+      ]),
+    ],
+    [orderedScouts]
+  );
+
+  useRegisterCommandActions(commandActions);
 
   const upsertScout = (nextScout: Scout) => {
     setScouts((current) => {

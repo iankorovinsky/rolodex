@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { RotateCcw } from 'lucide-react';
+import type { CommandAction } from '@/commands/types';
 import { PersonDetail } from '@/components/rolodex/person-detail';
 import { Button } from '@/components/ui/button';
+import { useRegisterCommandActions } from '@/commands/hooks/use-register-command-actions';
 import {
   createNote,
   createRequest,
@@ -14,6 +17,7 @@ import {
   updateRequest,
 } from '@/lib/rolodex/api';
 import type { Person, Tag, UpdatePersonRequest } from '@rolodex/types';
+import { getPersonDisplayName } from '@/lib/rolodex/person';
 
 export function PersonRoute() {
   const navigate = useNavigate();
@@ -38,6 +42,28 @@ export function PersonRoute() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  const commandActions = useMemo<CommandAction[]>(
+    () =>
+      person
+        ? [
+            {
+              id: `page:person:refresh:${person.id}`,
+              title: `Refresh ${getPersonDisplayName(person)}`,
+              subtitle: 'Reload this person from the API',
+              keywords: ['reload person', 'refresh'],
+              group: 'page',
+              icon: RotateCcw,
+              kind: 'action',
+              priority: 0,
+              perform: loadData,
+            },
+          ]
+        : [],
+    [loadData, person]
+  );
+
+  useRegisterCommandActions(commandActions);
 
   const handleUpdate = async (data: UpdatePersonRequest) => {
     const updated = await updatePerson(id, data);

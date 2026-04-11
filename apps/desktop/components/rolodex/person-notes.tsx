@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Notepad } from '@/components/ui/notepad';
 import type { PersonNote } from '@rolodex/types';
 
 interface PersonNotesProps {
@@ -32,25 +32,26 @@ export function PersonNotes({ notes, onAdd, onDelete }: PersonNotesProps) {
 
   return (
     <div className="space-y-3">
-      <div className="space-y-2">
-        <Textarea
-          value={content}
-          onChange={(event) => setContent(event.target.value)}
-          placeholder="Add a note about this person..."
-          rows={3}
-          disabled={isSaving}
-        />
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            size="sm"
-            onClick={handleAdd}
-            disabled={!content.trim() || isSaving}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      <Notepad
+        value={content}
+        onChange={(event) => setContent(event.target.value)}
+        placeholder="Add a note about this person..."
+        rows={5}
+        disabled={isSaving}
+        header={<p className="font-medium text-foreground">Quick note</p>}
+        footer={
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleAdd}
+              disabled={!content.trim() || isSaving}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        }
+      />
 
       {notes.length > 0 && (
         <div className="space-y-2">
