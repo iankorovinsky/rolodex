@@ -1,5 +1,6 @@
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/lib/auth/auth-context';
+import { CommandPaletteProvider } from '@/commands/provider';
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { HomeRoute } from './routes/home-route';
@@ -75,10 +76,12 @@ function ProtectedLayout() {
 
   return (
     <SidebarProvider>
-      <AppSidebar user={user} />
-      <SidebarInset>
-        <Outlet />
-      </SidebarInset>
+      <CommandPaletteProvider>
+        <AppSidebar user={user} />
+        <SidebarInset>
+          <Outlet />
+        </SidebarInset>
+      </CommandPaletteProvider>
     </SidebarProvider>
   );
 }
