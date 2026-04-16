@@ -52,7 +52,11 @@ export const Palette: Story = {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <Swatch name="brand.blue" value="var(--rdx-color-brand)" textClassName="text-white" />
             <Swatch name="brand.blueHover" value="var(--rdx-color-brand-hover)" />
-            <Swatch name="brand.blueActive" value="var(--rdx-color-brand-active)" textClassName="text-white" />
+            <Swatch
+              name="brand.blueActive"
+              value="var(--rdx-color-brand-active)"
+              textClassName="text-white"
+            />
             <Swatch name="brand.blueTint" value="var(--rdx-color-brand-tint)" />
           </div>
         </section>
@@ -63,9 +67,17 @@ export const Palette: Story = {
             <Swatch name="surface.page" value="var(--rdx-color-bg)" />
             <Swatch name="surface.alt" value="var(--rdx-color-bg-alt)" />
             <Swatch name="surface.raised" value="var(--rdx-color-bg-raised)" />
-            <Swatch name="surface.dark" value="var(--rdx-color-bg-dark)" textClassName="text-white" />
+            <Swatch
+              name="surface.dark"
+              value="var(--rdx-color-bg-dark)"
+              textClassName="text-white"
+            />
             <Swatch name="ink.strong" value="var(--rdx-color-fg)" textClassName="text-white" />
-            <Swatch name="ink.default" value="var(--rdx-color-fg-default)" textClassName="text-white" />
+            <Swatch
+              name="ink.default"
+              value="var(--rdx-color-fg-default)"
+              textClassName="text-white"
+            />
             <Swatch name="ink.muted" value="var(--rdx-color-fg-muted)" textClassName="text-white" />
             <Swatch name="ink.subtle" value="var(--rdx-color-fg-subtle)" />
           </div>

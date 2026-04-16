@@ -9,16 +9,16 @@ rolodex/
 │   └── api/          # Backend API (Bun)
 │
 ├── packages/
-│   ├── db/           # Prisma schema & database client
-│   └── types/        # Shared TypeScript types
+│   ├── db/             # Prisma schema & database client
+│   ├── eslint-config/  # Shared ESLint flat config (API + desktop)
+│   └── types/          # Shared TypeScript types
 │
 ├── tools/
 │   └── scripts/      # Repo scripts
 │
 ├── package.json       # Root workspace config
 ├── turbo.json         # Turborepo pipeline config
-├── tsconfig.base.json # Base TypeScript config
-└── .eslintignore      # Linter instructions
+└── tsconfig.base.json # Base TypeScript config
 ```
 
 ## Setup

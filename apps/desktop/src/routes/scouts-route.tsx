@@ -225,7 +225,10 @@ export function ScoutsRoute() {
     if (timeOptions.some((option) => option.value === formState.scheduleTimeLocal)) {
       return timeOptions;
     }
-    return [{ value: formState.scheduleTimeLocal, label: formState.scheduleTimeLocal }, ...timeOptions];
+    return [
+      { value: formState.scheduleTimeLocal, label: formState.scheduleTimeLocal },
+      ...timeOptions,
+    ];
   }, [formState.scheduleTimeLocal]);
 
   const closeDialog = () => {
@@ -660,7 +663,11 @@ export function ScoutsRoute() {
                       void handlePauseResume(editingScout);
                     }}
                   >
-                    {editingScout ? (editingScout.status === 'active' ? 'Pause' : 'Resume') : 'Pause'}
+                    {editingScout
+                      ? editingScout.status === 'active'
+                        ? 'Pause'
+                        : 'Resume'
+                      : 'Pause'}
                   </Button>
                   <Button
                     type="button"
@@ -681,12 +688,12 @@ export function ScoutsRoute() {
               )}
 
               <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={closeDialog} disabled={isSaving}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSaving}>
-                {isSaving ? 'Saving…' : editingScoutId ? 'Save changes' : 'Create scout'}
-              </Button>
+                <Button type="button" variant="outline" onClick={closeDialog} disabled={isSaving}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? 'Saving…' : editingScoutId ? 'Save changes' : 'Create scout'}
+                </Button>
               </div>
             </div>
           </form>

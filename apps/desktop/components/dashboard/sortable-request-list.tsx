@@ -225,7 +225,9 @@ export function SortableRequestList({
                   'focus-visible:ring-0 disabled:cursor-not-allowed'
                 )}
               />
-              <p className="truncate text-xs text-muted-foreground/90">{getRequestOwnerLabel(item)}</p>
+              <p className="truncate text-xs text-muted-foreground/90">
+                {getRequestOwnerLabel(item)}
+              </p>
             </div>
           </div>
         );

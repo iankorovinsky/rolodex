@@ -50,7 +50,12 @@ export const Scale: Story = {
         <div className="mt-8">
           <Row
             label="Hero Display"
-            style={{ fontFamily: 'var(--rdx-font-display)', fontSize: 64, lineHeight: 1, letterSpacing: -1.8 }}
+            style={{
+              fontFamily: 'var(--rdx-font-display)',
+              fontSize: 64,
+              lineHeight: 1,
+              letterSpacing: -1.8,
+            }}
           >
             Know who matters, and why.
           </Row>

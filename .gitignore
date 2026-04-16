@@ -1,3 +1,4 @@
+# Base
 node_modules
 .bun
 .env
@@ -47,7 +48,7 @@ coverage
 # Misc
 *.pem
 
-.trigger/
+# Temporal
 infra/temporal/*.db
 infra/temporal/*.db-shm
 infra/temporal/*.db-wal
@@ -56,5 +57,9 @@ infra/temporal/*.sqlite
 infra/temporal/*.sqlite-shm
 infra/temporal/*.sqlite-wal
 
+# Storybook
 *storybook.log
 storybook-static
+
+# Claude
+.claude/

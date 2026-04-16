@@ -39,7 +39,9 @@ export const Default: Story = {
             <div className="font-display text-2xl leading-none tracking-[-0.4px] text-foreground">
               rolodex
             </div>
-            <p className="text-sm text-muted-foreground">Trusted context for the people in your orbit.</p>
+            <p className="text-sm text-muted-foreground">
+              Trusted context for the people in your orbit.
+            </p>
           </div>
         </SidebarHeader>
         <SidebarContent className="bg-sidebar px-3 py-4">

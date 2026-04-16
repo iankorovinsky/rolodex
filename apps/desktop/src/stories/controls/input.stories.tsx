@@ -35,7 +35,9 @@ export const Gallery: Story = {
     <div className="flex min-h-[520px] items-start justify-center bg-muted p-6">
       <div className="w-full max-w-3xl rounded-[var(--rdx-radius-featured)] border border-border bg-card p-6 shadow-rdx-card">
         <div className="mb-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Inputs</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Inputs
+          </p>
           <h2 className="mt-2 text-2xl font-medium tracking-[-0.2px] text-foreground">
             Functional controls with quiet chrome.
           </h2>
@@ -56,7 +58,10 @@ export const Gallery: Story = {
           </Field>
 
           <Field label="Textarea">
-            <Textarea defaultValue="Met at the operator dinner in Toronto. Knows the growth team at Figma. Follow up next month after the product launch." className="min-h-28" />
+            <Textarea
+              defaultValue="Met at the operator dinner in Toronto. Knows the growth team at Figma. Follow up next month after the product launch."
+              className="min-h-28"
+            />
           </Field>
 
           <Field label="Select">
