@@ -144,7 +144,10 @@ const refreshGoogleTokens = async (integration: IntegrationRecord, refreshToken:
   );
 
   if (!payload.access_token) {
-    throw new TokenRefreshError('Google token refresh did not return an access token.', 'transient');
+    throw new TokenRefreshError(
+      'Google token refresh did not return an access token.',
+      'transient'
+    );
   }
 
   return {
@@ -192,7 +195,10 @@ const refreshGranolaTokens = async (integration: IntegrationRecord, refreshToken
   const clientId = getGranolaClientId(integration.metadata);
 
   if (!clientId) {
-    throw new TokenRefreshError('Granola refresh is missing the registered client id.', 'reauth_required');
+    throw new TokenRefreshError(
+      'Granola refresh is missing the registered client id.',
+      'reauth_required'
+    );
   }
 
   let authMetadata: { token_endpoint: string };
@@ -221,7 +227,10 @@ const refreshGranolaTokens = async (integration: IntegrationRecord, refreshToken
   );
 
   if (!payload.access_token) {
-    throw new TokenRefreshError('Granola token refresh did not return an access token.', 'transient');
+    throw new TokenRefreshError(
+      'Granola token refresh did not return an access token.',
+      'transient'
+    );
   }
 
   return {
@@ -241,10 +250,7 @@ const shouldRefresh = (integration: IntegrationRecord, minTtlSeconds = 0) => {
   return integration.tokenExpiresAt.getTime() <= Date.now() + threshold;
 };
 
-const markRefreshFailure = async (
-  integrationId: string,
-  error: TokenRefreshError
-) => {
+const markRefreshFailure = async (integrationId: string, error: TokenRefreshError) => {
   const now = new Date();
 
   await prisma.userIntegration.update({
@@ -264,7 +270,10 @@ const markRefreshFailure = async (
 const persistRefreshedTokens = async <T extends IntegrationRecord>(
   integration: T,
   refreshed: RefreshedTokenSet,
-  options?: { lastValidatedAt?: Date | null; metadata?: Prisma.InputJsonValue | typeof Prisma.JsonNull }
+  options?: {
+    lastValidatedAt?: Date | null;
+    metadata?: Prisma.InputJsonValue | typeof Prisma.JsonNull;
+  }
 ): Promise<T> => {
   const now = new Date();
 
@@ -280,7 +289,9 @@ const persistRefreshedTokens = async <T extends IntegrationRecord>(
       lastRefreshAttemptAt: now,
       lastRefreshError: null,
       reauthRequiredAt: null,
-      ...(options?.lastValidatedAt !== undefined ? { lastValidatedAt: options.lastValidatedAt } : {}),
+      ...(options?.lastValidatedAt !== undefined
+        ? { lastValidatedAt: options.lastValidatedAt }
+        : {}),
       ...(options?.metadata !== undefined ? { metadata: options.metadata } : {}),
     },
   }) as unknown as Promise<T>;
@@ -290,13 +301,19 @@ export const refreshStoredIntegrationTokens = async <T extends IntegrationRecord
   integration: T,
   options?: {
     minTtlSeconds?: number;
-    onGranolaRefreshed?: (accessToken: string, integration: IntegrationRecord) => Promise<{
+    onGranolaRefreshed?: (
+      accessToken: string,
+      integration: IntegrationRecord
+    ) => Promise<{
       metadata?: Prisma.InputJsonValue | typeof Prisma.JsonNull;
       lastValidatedAt?: Date | null;
     }>;
   }
 ): Promise<T> => {
-  if (integration.disconnectedAt || integration.connectionStatus === IntegrationConnectionStatus.RECONNECT_REQUIRED) {
+  if (
+    integration.disconnectedAt ||
+    integration.connectionStatus === IntegrationConnectionStatus.RECONNECT_REQUIRED
+  ) {
     return integration;
   }
 
@@ -307,7 +324,10 @@ export const refreshStoredIntegrationTokens = async <T extends IntegrationRecord
   const refreshToken = decryptIntegrationToken(integration.refreshToken);
 
   if (!refreshToken) {
-    const error = new TokenRefreshError('Refresh token is missing. Reconnect this account.', 'reauth_required');
+    const error = new TokenRefreshError(
+      'Refresh token is missing. Reconnect this account.',
+      'reauth_required'
+    );
     await markRefreshFailure(integration.id, error);
     throw error;
   }

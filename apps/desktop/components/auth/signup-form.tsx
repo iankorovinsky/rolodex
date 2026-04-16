@@ -75,7 +75,9 @@ export function SignupForm() {
     }
 
     if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-      setError('An account with this email already exists. Try signing in or resetting your password.');
+      setError(
+        'An account with this email already exists. Try signing in or resetting your password.'
+      );
       setLoading(false);
       return;
     }
@@ -91,7 +93,7 @@ export function SignupForm() {
           <Input
             id="email"
             type="email"
-            placeholder="you@hackthenorth.com"
+            placeholder="you@rolodex.app"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -102,7 +104,7 @@ export function SignupForm() {
           <Input
             id="password"
             type="password"
-            placeholder="b3sT-h4ck4th0n-EveR!"
+            placeholder="Rolodex!Meet1"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -121,7 +123,12 @@ export function SignupForm() {
                     requirement.met ? 'text-emerald-300' : 'text-white/78'
                   )}
                 >
-                  <Icon className={cn('h-4 w-4', requirement.met ? 'text-emerald-300' : 'text-white/55')} />
+                  <Icon
+                    className={cn(
+                      'h-4 w-4',
+                      requirement.met ? 'text-emerald-300' : 'text-white/55'
+                    )}
+                  />
                   <span>{requirement.label}</span>
                 </div>
               );
@@ -141,7 +148,10 @@ export function SignupForm() {
 
       <p className="text-center text-sm text-white/88">
         already have an account?{' '}
-        <Link to="/login" className="font-medium text-white underline decoration-white/50 underline-offset-4">
+        <Link
+          to="/login"
+          className="font-medium text-white underline decoration-white/50 underline-offset-4"
+        >
           sign in
         </Link>
       </p>

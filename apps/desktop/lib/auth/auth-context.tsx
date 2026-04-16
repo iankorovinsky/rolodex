@@ -46,20 +46,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      setUser((currentUser) => {
-        if (
-          preserveExistingUser &&
-          currentUser &&
-          currentUser.id === fallbackUser.id &&
-          currentUser.name?.trim() &&
-          currentUser.avatarId
-        ) {
-          return currentUser;
-        }
+      const shouldPreserveCurrentUser =
+        preserveExistingUser &&
+        userRef.current &&
+        userRef.current.id === fallbackUser.id &&
+        userRef.current.firstName?.trim() &&
+        userRef.current.avatarId;
 
-        return fallbackUser;
-      });
-      setLoading(false);
+      if (!shouldPreserveCurrentUser) {
+        setUser(fallbackUser);
+      }
 
       try {
         const profile = await getCurrentUser();
@@ -182,10 +178,17 @@ export function useAuth() {
 }
 
 function mapSupabaseUser(supabaseUser: SupabaseUser): AuthUser {
+  const fullName = (
+    supabaseUser.user_metadata?.full_name ||
+    supabaseUser.user_metadata?.name ||
+    ''
+  ).trim();
+  const [firstName, ...rest] = fullName ? fullName.split(/\s+/) : [];
   return {
     id: supabaseUser.id,
     email: supabaseUser.email || '',
-    name: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || null,
+    firstName: firstName || null,
+    lastName: rest.join(' ') || null,
     avatarId: null,
   };
 }

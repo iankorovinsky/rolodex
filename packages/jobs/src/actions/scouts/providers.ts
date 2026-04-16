@@ -16,10 +16,7 @@ export interface ResearchProvider {
 }
 
 export interface SummaryProvider {
-  summarizeScoutDigest(input: {
-    scout: Scout;
-    sources: ScoutResearchSource[];
-  }): Promise<{
+  summarizeScoutDigest(input: { scout: Scout; sources: ScoutResearchSource[] }): Promise<{
     subject: string;
     html: string;
     text: string;
@@ -38,7 +35,8 @@ export interface EmailProvider {
 
 const DEFAULT_COHERE_MODEL = 'command-r-plus';
 
-const relevanceLabel = (value: ScoutRelevanceWindow) => (value === 'day' ? 'last 24 hours' : 'last 7 days');
+const relevanceLabel = (value: ScoutRelevanceWindow) =>
+  value === 'day' ? 'last 24 hours' : 'last 7 days';
 
 export const tavilyResearchProvider: ResearchProvider = {
   async searchForScout({ topic, relevanceWindow }) {

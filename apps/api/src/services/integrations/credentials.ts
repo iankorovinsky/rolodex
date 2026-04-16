@@ -16,10 +16,7 @@ const getIntegrationEncryptionKey = () => {
   const key = Buffer.from(rawKey, 'base64');
 
   if (key.length !== KEY_BYTES) {
-    throw createAppError(
-      'INTEGRATIONS_ENCRYPTION_KEY must be a base64-encoded 32-byte key.',
-      500
-    );
+    throw createAppError('INTEGRATIONS_ENCRYPTION_KEY must be a base64-encoded 32-byte key.', 500);
   }
 
   return key;
@@ -47,7 +44,9 @@ export const decryptIntegrationToken = (value: string | null | undefined): strin
     return value;
   }
 
-  const [ivBase64, authTagBase64, ciphertextBase64] = value.slice(ENCRYPTED_PREFIX.length).split(':');
+  const [ivBase64, authTagBase64, ciphertextBase64] = value
+    .slice(ENCRYPTED_PREFIX.length)
+    .split(':');
 
   if (!ivBase64 || !authTagBase64 || !ciphertextBase64) {
     throw createAppError('Stored integration credentials are invalid.', 500);

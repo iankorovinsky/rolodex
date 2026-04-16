@@ -9,9 +9,12 @@
   ],
   "scripts": {
     "postinstall": "node ./tools/scripts/install-electron.mjs",
-    "dev": "turbo run dev --ui=tui --parallel --filter=@rolodex/desktop --filter=@rolodex/api",
-    "dev:parallel": "turbo run dev --ui=tui --parallel --filter=@rolodex/desktop --filter=@rolodex/api",
+    "dev": "node ./tools/scripts/dev-with-temporal.mjs",
+    "dev:parallel": "node ./tools/scripts/dev-with-temporal.mjs",
     "dev:custom": "node ./tools/scripts/dev-tui.js",
+    "dev:storybook": "bun run --filter @rolodex/desktop storybook",
+    "temporal:dev": "node ./tools/scripts/start-temporal-dev.mjs",
+    "temporal:worker": "bun run --filter @rolodex/jobs dev",
     "build": "turbo run build --output-logs=full",
     "typecheck": "turbo run typecheck --output-logs=full",
     "lint": "turbo run lint --output-logs=full",
@@ -21,18 +24,16 @@
     "fmt": "bun format",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" --ignore-path .gitignore",
     "db:generate": "turbo run generate --filter=@rolodex/db",
-    "db:migrate": "turbo run migrate:dev --filter=@rolodex/db",
+    "db:migrate": "bun run --filter @rolodex/db migrate:dev",
     "db:studio": "turbo run studio --filter=@rolodex/db",
     "db:format": "turbo run format --filter=@rolodex/db",
     "electron:install": "node ./tools/scripts/install-electron.mjs",
-    "imessage-sync": "bun ./packages/imessage-sync/src/index.ts",
-    "trigger:dev": "dotenv -e .env -- bunx trigger.dev@4.3.3 dev",
-    "trigger:deploy": "dotenv -e .env -- bunx trigger.dev@4.3.3 deploy"
+    "imessage-sync": "bun ./packages/imessage-sync/src/index.ts"
   },
   "devDependencies": {
+    "@temporalio/client": "^1.13.0",
     "@prisma/client": "^6.0.0",
     "@tailwindcss/vite": "^4.2.1",
-    "@trigger.dev/sdk": "4.3.3",
     "blessed": "^0.1.81",
     "blessed-contrib": "^4.11.0",
     "chokidar": "^4.0.3",
@@ -41,6 +42,7 @@
     "dotenv-cli": "^7.4.2",
     "prettier": "^3.5.3",
     "prisma": "^6.0.0",
+    "tsx": "^4.20.6",
     "turbo": "^2.3.3"
   },
   "dependencies": {

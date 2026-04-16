@@ -23,11 +23,7 @@ const groupLabels: Record<CommandGroupKey, string> = {
   account: 'Account',
 };
 
-function CommandIcon({
-  icon: Icon,
-}: {
-  icon?: ComponentType<{ className?: string }>;
-}) {
+function CommandIcon({ icon: Icon }: { icon?: ComponentType<{ className?: string }> }) {
   return Icon ? <Icon className="h-4 w-4 text-muted-foreground" /> : null;
 }
 
@@ -79,7 +75,9 @@ export function CommandPalette({
                       <div className="min-w-0 flex-1">
                         <div className="truncate">{item.title}</div>
                         {item.subtitle ? (
-                          <div className="truncate text-xs text-muted-foreground">{item.subtitle}</div>
+                          <div className="truncate text-xs text-muted-foreground">
+                            {item.subtitle}
+                          </div>
                         ) : null}
                       </div>
                     </CommandItem>

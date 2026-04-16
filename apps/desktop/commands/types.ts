@@ -1,12 +1,6 @@
 import type { ComponentType } from 'react';
 
-export const COMMAND_GROUP_ORDER = [
-  'navigation',
-  'create',
-  'page',
-  'people',
-  'account',
-] as const;
+export const COMMAND_GROUP_ORDER = ['navigation', 'create', 'page', 'people', 'account'] as const;
 
 export type CommandGroupKey = (typeof COMMAND_GROUP_ORDER)[number];
 

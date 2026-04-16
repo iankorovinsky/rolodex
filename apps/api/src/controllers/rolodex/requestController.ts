@@ -3,6 +3,7 @@ import type {
   ApiResponse,
   Request as RequestType,
   CreateRequestRequest,
+  ReorderRequestsRequest,
   UpdateRequestRequest,
   RequestType as RequestTypeEnum,
 } from '@rolodex/types';
@@ -13,6 +14,7 @@ import {
   createRequest,
   deleteRequest,
   listRequests,
+  reorderRequests,
   updateRequest,
 } from '../../services/rolodex/request';
 
@@ -84,6 +86,25 @@ export const deleteRequestHandler = async (req: Request, res: Response, next: Ne
     const response: ApiResponse<null> = {
       success: true,
       data: null,
+    };
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const reorderRequestsHandler = async (req: Request, res: Response, next: NextFunction) => {
+  const { userId } = req as AuthenticatedRequest;
+  try {
+    const body = req.body as ReorderRequestsRequest;
+    if (!Array.isArray(body.ids)) {
+      throw createAppError('ids is required.', 400);
+    }
+
+    const requests = await reorderRequests(userId, body);
+    const response: ApiResponse<RequestType[]> = {
+      success: true,
+      data: requests,
     };
     res.json(response);
   } catch (error) {

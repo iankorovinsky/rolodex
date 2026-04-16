@@ -22,12 +22,14 @@ export type AvatarIdValue = (typeof AVATAR_IDS)[number];
 export interface UserProfile {
   id: string;
   email: string;
-  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
   avatarId: AvatarIdValue | null;
 }
 
 export interface UpdateUserProfileRequest {
-  name: string;
+  firstName: string;
+  lastName?: string | null;
   avatarId: AvatarIdValue;
 }
 

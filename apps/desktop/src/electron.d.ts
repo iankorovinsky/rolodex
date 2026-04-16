@@ -13,6 +13,8 @@ declare global {
         path: string;
         valid: boolean;
       }>;
+      /** macOS only: opens System Settings → Privacy & Security → Full Disk Access. */
+      openFullDiskAccessSettings: () => Promise<void>;
       prepareOAuthCallback: (options: { failureTitle: string; successTitle: string }) => Promise<{
         callbackId: string;
         redirectUri: string;

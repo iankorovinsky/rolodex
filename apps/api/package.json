@@ -12,12 +12,12 @@
     "test:watch": "bun test --watch"
   },
   "dependencies": {
+    "@temporalio/client": "^1.13.0",
     "@rolodex/db": "workspace:*",
     "@rolodex/jobs": "workspace:*",
     "@rolodex/types": "workspace:*",
     "@prisma/client": "^6.0.0",
     "@supabase/supabase-js": "^2.49.8",
-    "@trigger.dev/sdk": "4.3.3",
     "dotenv": "^16.4.7",
     "express": "^5.0.0"
   },

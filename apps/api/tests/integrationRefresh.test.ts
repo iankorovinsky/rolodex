@@ -29,11 +29,7 @@ mock.module('@rolodex/db', () => {
   };
 });
 
-import {
-  IntegrationConnectionStatus,
-  IntegrationProvider,
-  prisma,
-} from '@rolodex/db';
+import { IntegrationConnectionStatus, IntegrationProvider, prisma } from '@rolodex/db';
 import { listUserIntegrations } from '../src/services/integrations/integrations';
 import { refreshStoredIntegrationTokens } from '../src/services/integrations/tokenManager';
 

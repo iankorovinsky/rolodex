@@ -99,7 +99,9 @@ function addCalendarDays(
   minute: number
 ) {
   const parts = getLocalParts(date, timeZone);
-  const shifted = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + daysToAdd, hour, minute));
+  const shifted = new Date(
+    Date.UTC(parts.year, parts.month - 1, parts.day + daysToAdd, hour, minute)
+  );
   const shiftedParts = getLocalParts(shifted, 'UTC');
 
   return zonedDateTimeToUtc(
@@ -156,13 +158,7 @@ export function getNextScoutRunAt(schedule: ScoutScheduleShape, from = new Date(
   while (candidate <= from && safety < 10_000) {
     candidate =
       schedule.scheduleUnit === 'day'
-        ? addCalendarDays(
-            candidate,
-            schedule.timezone,
-            schedule.scheduleInterval,
-            hour,
-            minute
-          )
+        ? addCalendarDays(candidate, schedule.timezone, schedule.scheduleInterval, hour, minute)
         : addCalendarDays(
             candidate,
             schedule.timezone,
@@ -199,8 +195,7 @@ export function isScoutDueAt(schedule: ScoutScheduleShape, at = new Date()) {
   }
 
   const localDay = Date.UTC(localParts.year, localParts.month - 1, localParts.day) / 86_400_000;
-  const anchorDay =
-    Date.UTC(anchorParts.year, anchorParts.month - 1, anchorParts.day) / 86_400_000;
+  const anchorDay = Date.UTC(anchorParts.year, anchorParts.month - 1, anchorParts.day) / 86_400_000;
 
   return (
     localParts.weekday === schedule.scheduleDayOfWeek &&
@@ -223,17 +218,5 @@ export function buildScoutCron(
     throw new Error('Weekly schedules require a day of week.');
   }
 
-  return `${minute} ${hour} * * ${WEEKDAY_TO_INDEX[scheduleDayOfWeek]}`;
-}
-
-export function formatScoutCadence(schedule: ScoutScheduleShape) {
-  if (schedule.scheduleUnit === 'day') {
-    return schedule.scheduleInterval === 1
-      ? 'Every day'
-      : `Every ${schedule.scheduleInterval} days`;
-  }
-
-  return schedule.scheduleInterval === 1
-    ? `Every week on ${schedule.scheduleDayOfWeek ?? WEEKDAY_VALUES[0]}`
-    : `Every ${schedule.scheduleInterval} weeks on ${schedule.scheduleDayOfWeek ?? WEEKDAY_VALUES[0]}`;
+  return `${minute} ${hour} * * ${WEEKDAY_VALUES.indexOf(scheduleDayOfWeek)}`;
 }

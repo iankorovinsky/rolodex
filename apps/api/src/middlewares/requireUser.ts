@@ -6,7 +6,8 @@ import { extractBearerToken, hashDeviceToken, verifySupabaseAccessToken } from '
 interface AuthenticatedSupabaseUser {
   id: string;
   email: string;
-  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
 }
 
 export interface AuthenticatedRequest extends Request {
@@ -41,11 +42,14 @@ export const requireUser = async (req: Request, res: Response, next: NextFunctio
 
   try {
     const user = await verifySupabaseAccessToken(token);
+    const fullName = (user.user_metadata?.full_name || user.user_metadata?.name || '').trim();
+    const [firstName, ...rest] = fullName ? fullName.split(/\s+/) : [];
     (req as AuthenticatedRequest).userId = user.id;
     (req as AuthenticatedRequest).authUser = {
       id: user.id,
       email: user.email || '',
-      name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+      firstName: firstName || null,
+      lastName: rest.join(' ') || null,
     };
     next();
   } catch {

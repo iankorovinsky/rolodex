@@ -21,11 +21,7 @@ import {
   syncMessages,
 } from '../../services/integrations/imessage';
 
-export const createDeviceTokenHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const createDeviceTokenHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const data = await createUserDeviceToken(
       (req as AuthenticatedRequest).userId,
@@ -38,25 +34,17 @@ export const createDeviceTokenHandler = async (
   }
 };
 
-export const listDeviceTokensHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-    try {
-      const data = await listUserDeviceTokens((req as AuthenticatedRequest).userId);
-      const response: ApiResponse<UserDeviceToken[]> = { success: true, data };
-      res.json(response);
-    } catch (error) {
-      next(error);
-    }
+export const listDeviceTokensHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = await listUserDeviceTokens((req as AuthenticatedRequest).userId);
+    const response: ApiResponse<UserDeviceToken[]> = { success: true, data };
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
 };
 
-export const revokeDeviceTokenHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const revokeDeviceTokenHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     await revokeUserDeviceToken((req as AuthenticatedRequest).userId, req.params.id);
     const response: ApiResponse<null> = { success: true, data: null };

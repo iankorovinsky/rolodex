@@ -1,35 +1,17 @@
 import { prisma, ScoutStatus } from '@rolodex/db';
 import type { Scout as DbScout } from '@rolodex/db';
-import { configure, schedules } from '@trigger.dev/sdk/v3';
 import type { CreateScoutRequest, Scout, UpdateScoutRequest } from '@rolodex/types';
+import { getNextScoutRunAt } from './scoutTasks';
 import {
-  buildScoutCron,
-  executeScheduledScoutTask,
-  executeScoutTask,
-  getNextScoutRunAt,
-} from './scoutTasks';
+  deleteScoutTemporalSchedule,
+  pauseScoutTemporalSchedule,
+  resumeScoutTemporalSchedule,
+  runScoutTemporalNow,
+  syncScoutTemporalSchedule,
+} from './temporal';
 import { createAppError } from '../utils/errors';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
-
-let triggerConfigured = false;
-
-function ensureTriggerConfigured() {
-  if (triggerConfigured) {
-    return;
-  }
-
-  const accessToken = process.env.TRIGGER_SECRET_KEY;
-  if (!accessToken) {
-    throw createAppError('Missing TRIGGER_SECRET_KEY.', 500);
-  }
-
-  configure({
-    accessToken,
-    baseURL: process.env.TRIGGER_API_URL || 'https://api.trigger.dev',
-  });
-  triggerConfigured = true;
-}
 
 function mapScout(record: DbScout): Scout {
   const recipientEmails = Array.isArray(record.recipientEmails)
@@ -52,7 +34,7 @@ function mapScout(record: DbScout): Scout {
     relevanceWindow: record.relevanceWindow.toLowerCase() as Scout['relevanceWindow'],
     recipientEmails,
     status: record.status.toLowerCase() as Scout['status'],
-    triggerScheduleId: record.triggerScheduleId,
+    scheduleId: record.scheduleId,
     nextRunAt: record.nextRunAt?.toISOString() ?? null,
     lastRunAt: record.lastRunAt?.toISOString() ?? null,
     lastSuccessAt: record.lastSuccessAt?.toISOString() ?? null,
@@ -64,9 +46,7 @@ function mapScout(record: DbScout): Scout {
 }
 
 function normalizeRecipientEmails(recipientEmails: string[]) {
-  const normalized = recipientEmails
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
+  const normalized = recipientEmails.map((email) => email.trim().toLowerCase()).filter(Boolean);
   const deduped = Array.from(new Set(normalized));
 
   if (deduped.length === 0) {
@@ -114,7 +94,7 @@ function normalizeCreateInput(input: CreateScoutRequest) {
     topic,
     scheduleUnit: input.scheduleUnit,
     scheduleInterval: input.scheduleInterval,
-    scheduleDayOfWeek: input.scheduleUnit === 'week' ? input.scheduleDayOfWeek ?? null : null,
+    scheduleDayOfWeek: input.scheduleUnit === 'week' ? (input.scheduleDayOfWeek ?? null) : null,
     scheduleTimeLocal: input.scheduleTimeLocal,
     timezone: input.timezone || 'UTC',
     relevanceWindow: input.relevanceWindow,
@@ -150,62 +130,36 @@ function isScheduleConfigChange(existing: Scout, next: ReturnType<typeof normali
 }
 
 async function syncScoutSchedule(scout: Scout) {
-  ensureTriggerConfigured();
-  const cron = buildScoutCron(scout.scheduleUnit, scout.scheduleDayOfWeek, scout.scheduleTimeLocal);
-
-  if (!scout.triggerScheduleId) {
-    const schedule = await schedules.create({
-      task: executeScheduledScoutTask.id,
-      cron,
-      timezone: scout.timezone,
-      externalId: `scout:${scout.id}`,
-      deduplicationKey: `scout:${scout.id}`,
-    });
-
-    return {
-      triggerScheduleId: schedule.id,
-      nextRunAt: getNextScoutRunAt(scout),
-    };
-  }
-
-  await schedules.update(scout.triggerScheduleId, {
-    task: executeScheduledScoutTask.id,
-    cron,
-    timezone: scout.timezone,
-    externalId: `scout:${scout.id}`,
-  });
+  const scheduleId = await syncScoutTemporalSchedule(scout);
 
   return {
-    triggerScheduleId: scout.triggerScheduleId,
+    scheduleId,
     nextRunAt: getNextScoutRunAt(scout),
   };
 }
 
-async function deactivateScoutSchedule(triggerScheduleId: string | null) {
-  if (!triggerScheduleId) {
+async function deactivateScoutSchedule(scheduleId: string | null) {
+  if (!scheduleId) {
     return;
   }
 
-  ensureTriggerConfigured();
-  await schedules.deactivate(triggerScheduleId);
+  await pauseScoutTemporalSchedule(scheduleId);
 }
 
-async function activateScoutSchedule(triggerScheduleId: string | null) {
-  if (!triggerScheduleId) {
+async function activateScoutSchedule(scheduleId: string | null) {
+  if (!scheduleId) {
     return;
   }
 
-  ensureTriggerConfigured();
-  await schedules.activate(triggerScheduleId);
+  await resumeScoutTemporalSchedule(scheduleId);
 }
 
-async function deleteScoutSchedule(triggerScheduleId: string | null) {
-  if (!triggerScheduleId) {
+async function deleteScoutSchedule(scheduleId: string | null) {
+  if (!scheduleId) {
     return;
   }
 
-  ensureTriggerConfigured();
-  await schedules.del(triggerScheduleId);
+  await deleteScoutTemporalSchedule(scheduleId);
 }
 
 async function getOwnedScoutRecord(userId: string, scoutId: string) {
@@ -323,7 +277,7 @@ export async function updateScout(userId: string, scoutId: string, input: Update
 
 export async function pauseScout(userId: string, scoutId: string) {
   const scout = await getOwnedScoutRecord(userId, scoutId);
-  await deactivateScoutSchedule(scout.triggerScheduleId);
+  await deactivateScoutSchedule(scout.scheduleId);
 
   const updated = await prisma.scout.update({
     where: { id: scout.id },
@@ -339,7 +293,7 @@ export async function pauseScout(userId: string, scoutId: string) {
 export async function resumeScout(userId: string, scoutId: string) {
   const scout = await getOwnedScoutRecord(userId, scoutId);
 
-  if (!scout.triggerScheduleId) {
+  if (!scout.scheduleId) {
     const scheduleAnchorAt = scout.scheduleAnchorAt;
     const resumed = await prisma.scout.update({
       where: { id: scout.id },
@@ -359,7 +313,7 @@ export async function resumeScout(userId: string, scoutId: string) {
     return mapScout(updated);
   }
 
-  await activateScoutSchedule(scout.triggerScheduleId);
+  await activateScoutSchedule(scout.scheduleId);
   const updated = await prisma.scout.update({
     where: { id: scout.id },
     data: {
@@ -373,25 +327,21 @@ export async function resumeScout(userId: string, scoutId: string) {
 
 export async function deleteScout(userId: string, scoutId: string) {
   const scout = await getOwnedScoutRecord(userId, scoutId);
-  await deleteScoutSchedule(scout.triggerScheduleId);
+  await deleteScoutSchedule(scout.scheduleId);
 
   await prisma.scout.update({
     where: { id: scout.id },
     data: {
       deletedAt: new Date(),
       nextRunAt: null,
-      triggerScheduleId: null,
+      scheduleId: null,
     },
   });
 }
 
 export async function runScoutNow(userId: string, scoutId: string) {
   const scout = await getOwnedScoutRecord(userId, scoutId);
-  ensureTriggerConfigured();
-  await executeScoutTask.trigger({
-    scoutId: scout.id,
-    trigger: 'manual',
-  });
+  await runScoutTemporalNow(scout.id);
 
   return { queued: true };
 }

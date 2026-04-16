@@ -34,7 +34,9 @@ export function ForgotPasswordForm() {
       setMessage('Check your email for a password reset link.');
       setLoading(false);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Unable to send reset email.');
+      setError(
+        requestError instanceof Error ? requestError.message : 'Unable to send reset email.'
+      );
       setLoading(false);
     }
   };
@@ -46,7 +48,7 @@ export function ForgotPasswordForm() {
           <Input
             id="reset-email"
             type="email"
-            placeholder="you@hackthenorth.com"
+            placeholder="you@rolodex.app"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             required
@@ -55,14 +57,21 @@ export function ForgotPasswordForm() {
         </div>
         {error && <p className="text-sm text-red-300">{error}</p>}
         {message && <p className="text-sm text-emerald-300">{message}</p>}
-        <Button type="submit" className="w-full bg-white text-black hover:bg-white/90" disabled={loading}>
+        <Button
+          type="submit"
+          className="w-full bg-white text-black hover:bg-white/90"
+          disabled={loading}
+        >
           {loading ? 'sending...' : 'send reset link'}
         </Button>
       </form>
 
       <p className="text-center text-sm text-white/88">
         remember your password?{' '}
-        <Link to="/login" className="font-medium text-white underline decoration-white/50 underline-offset-4">
+        <Link
+          to="/login"
+          className="font-medium text-white underline decoration-white/50 underline-offset-4"
+        >
           sign in
         </Link>
       </p>

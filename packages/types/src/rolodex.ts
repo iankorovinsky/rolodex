@@ -1,4 +1,5 @@
 import type {
+  Company as DbCompany,
   Request as DbRequest,
   RequestType as DbRequestType,
   Person as DbPerson,
@@ -13,6 +14,7 @@ import type {
   Tag as DbTag,
 } from '@rolodex/db';
 
+export type Company = DbCompany;
 export type Role = DbRole;
 export type Tag = DbTag;
 export type PersonNote = DbPersonNote;
@@ -24,12 +26,19 @@ export type PersonEmailEvent = DbPersonEmailEvent;
 export type PersonCalendarEvent = DbPersonCalendarEvent;
 export type RequestType = DbRequestType;
 
+export interface RequestPersonSummary {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+}
+
 export type Request = DbRequest & {
   children?: Request[];
+  person?: RequestPersonSummary;
 };
 
 export type Person = DbPerson & {
-  roles: Role[];
+  roles: Array<Role & { companyRecord?: Company | null }>;
   tags: Tag[];
   phones: PersonPhone[];
   emails: PersonEmail[];
@@ -43,6 +52,7 @@ export type Person = DbPerson & {
 export type RoleInput = {
   title: string;
   company?: string;
+  companyId?: string;
 };
 
 export type CreatePersonRequest = {
@@ -82,6 +92,14 @@ export type CreateTagRequest = {
   color?: string;
 };
 
+export type CreateCompanyRequest = {
+  name: string;
+};
+
+export type UpdateCompanyRequest = {
+  name?: string;
+};
+
 export type UpdateTagRequest = {
   name?: string;
   color?: string;
@@ -98,6 +116,11 @@ export type UpdateRequestRequest = {
   description?: string;
   completed?: boolean;
   parentId?: string | null;
+  position?: number | null;
+};
+
+export type ReorderRequestsRequest = {
+  ids: string[];
 };
 
 export type CreatePersonNoteRequest = {
@@ -149,3 +172,14 @@ export type SyncMessagePayload = {
   direction: MessageDirection;
   cursor: number;
 };
+
+export interface DashboardSummary {
+  peopleCount: number;
+  companiesCount: number;
+  scoutsCount: number;
+  lastUpdateAt: string | null;
+  requests: {
+    asks: Request[];
+    favours: Request[];
+  };
+}

@@ -1,8 +1,8 @@
 import { prisma, ScoutStatus } from '@rolodex/db';
 import type { Scout } from '@rolodex/types';
 import { cohereSummaryProvider, resendEmailProvider, tavilyResearchProvider } from './providers';
-import { getNextScoutRunAt, isScoutDueAt } from './schedule';
-import type { ScoutExecutionPayload } from './task';
+import { getNextScoutRunAt, isScoutDueAt } from '../../schedules/scouts';
+import type { ScoutExecutionPayload } from '../../workflows/scouts';
 
 function mapScout(record: Awaited<ReturnType<typeof prisma.scout.findUniqueOrThrow>>): Scout {
   const recipientEmails = Array.isArray(record.recipientEmails)
@@ -25,7 +25,7 @@ function mapScout(record: Awaited<ReturnType<typeof prisma.scout.findUniqueOrThr
     relevanceWindow: record.relevanceWindow.toLowerCase() as Scout['relevanceWindow'],
     recipientEmails,
     status: record.status.toLowerCase() as Scout['status'],
-    triggerScheduleId: record.triggerScheduleId,
+    scheduleId: record.scheduleId,
     nextRunAt: record.nextRunAt?.toISOString() ?? null,
     lastRunAt: record.lastRunAt?.toISOString() ?? null,
     lastSuccessAt: record.lastSuccessAt?.toISOString() ?? null,
@@ -100,7 +100,8 @@ export async function executeScout(payload: ScoutExecutionPayload) {
       data: {
         lastRunAt: now,
         lastFailureAt: now,
-        lastFailureReason: error instanceof Error ? error.message : 'Unknown scout execution error.',
+        lastFailureReason:
+          error instanceof Error ? error.message : 'Unknown scout execution error.',
         nextRunAt:
           payload.trigger === 'scheduled' && scout.status === 'active'
             ? getNextScoutRunAt(scout, now)

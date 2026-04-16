@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld('rolodexDesktop', {
       path: string;
       valid: boolean;
     }>,
+  openFullDiskAccessSettings: () =>
+    ipcRenderer.invoke('integrations:open-full-disk-access-settings') as Promise<void>,
   prepareOAuthCallback: (options: { failureTitle: string; successTitle: string }) =>
     ipcRenderer.invoke('integrations:prepare-oauth-callback', options) as Promise<{
       callbackId: string;

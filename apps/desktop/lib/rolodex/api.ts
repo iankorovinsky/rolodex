@@ -1,6 +1,7 @@
 import type {
   ApiResponse,
   AvatarIdValue,
+  Company,
   ConnectGranolaIntegrationRequest,
   ConnectOAuthIntegrationRequest,
   Person,
@@ -11,14 +12,18 @@ import type {
   CreatePersonRequest,
   UpdatePersonRequest,
   CreateTagRequest,
+  CreateCompanyRequest,
   UpdateTagRequest,
+  UpdateCompanyRequest,
   CreateRequestRequest,
+  ReorderRequestsRequest,
   UpdateRequestRequest,
   CreatePersonNoteRequest,
   CreateScoutRequest,
   PeopleQueryParams,
   CreateUserDeviceTokenRequest,
   CreateUserDeviceTokenResponse,
+  DashboardSummary,
   IMessageSyncStatus,
   IntegrationConnection,
   IntegrationType,
@@ -127,6 +132,33 @@ export async function deleteTag(id: string): Promise<void> {
   await fetchApi(`/api/rolodex/tags/${id}`, { method: 'DELETE' });
 }
 
+// Companies
+export async function getCompanies(): Promise<Company[]> {
+  return fetchApi<Company[]>('/api/rolodex/companies');
+}
+
+export async function getCompanyById(id: string): Promise<Company> {
+  return fetchApi<Company>(`/api/rolodex/companies/${id}`);
+}
+
+export async function createCompany(data: CreateCompanyRequest): Promise<Company> {
+  return fetchApi<Company>('/api/rolodex/companies', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateCompany(id: string, data: UpdateCompanyRequest): Promise<Company> {
+  return fetchApi<Company>(`/api/rolodex/companies/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteCompany(id: string): Promise<void> {
+  await fetchApi(`/api/rolodex/companies/${id}`, { method: 'DELETE' });
+}
+
 // Requests
 export async function getRequests(personId?: string, type?: RequestType): Promise<Request[]> {
   const params = new URLSearchParams();
@@ -145,6 +177,13 @@ export async function createRequest(data: CreateRequestRequest): Promise<Request
 
 export async function updateRequest(id: string, data: UpdateRequestRequest): Promise<Request> {
   return fetchApi<Request>(`/api/rolodex/requests/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function reorderRequests(data: ReorderRequestsRequest): Promise<Request[]> {
+  return fetchApi<Request[]>('/api/rolodex/requests/reorder', {
     method: 'PUT',
     body: JSON.stringify(data),
   });
@@ -225,6 +264,10 @@ export async function disconnectIntegration(id: string): Promise<void> {
 
 export async function getCurrentUser(): Promise<UserProfile> {
   return fetchApi<UserProfile>('/api/users/me');
+}
+
+export async function getDashboardSummary(): Promise<DashboardSummary> {
+  return fetchApi<DashboardSummary>('/api/rolodex/dashboard');
 }
 
 export async function updateCurrentUserProfile(

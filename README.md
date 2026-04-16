@@ -46,9 +46,11 @@ bun run db:migrate
 
 ```bash
 # Development
-bun run dev                   # Start desktop + api in Turbo's built-in TUI
+bun run dev                   # Start local Temporal + desktop + api
 bun run dev:parallel          # Same as dev
-bun run dev:custom            # Start the custom Blessed dashboard from tools/scripts/dev-tui.js
+bun run dev:custom            # Start the custom Blessed dashboard with Temporal, worker, desktop, api, and db
+bun run temporal:dev          # Start only the local Temporal dev server
+bun run temporal:worker       # Start only the local Temporal worker
 bun run electron:install      # Reinstall the local Electron binary if desktop dev fails
 
 # Build & Test
@@ -129,13 +131,21 @@ Bun loads the root `.env` for the workspace. Use these names:
 - `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` for backend token verification
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and `API_URL` for the Electron renderer
 - `ROLODEX_DEVICE_TOKEN` and `ROLODEX_MESSAGES_DB_PATH` only if you want default values for the macOS runner CLI
-- `TRIGGER_ACCESS_TOKEN` for Trigger.dev
+- `TEMPORAL_ADDRESS` only if you need to override the default local Temporal address
 
 The Supabase URL and publishable key appear twice on purpose:
+
 - plain `SUPABASE_*` for server-side code
 - `VITE_*` for renderer-exposed Electron code
 
 `API_URL` is shared by both the Electron renderer and the macOS runner CLI.
+
+Local Temporal development uses:
+
+- gRPC server on `localhost:7233`
+- Web UI on `http://localhost:8233`
+- SQLite persistence at `infra/temporal/dev.db`
+- a local worker via `bun run temporal:worker`
 
 ## Adding New Packages
 

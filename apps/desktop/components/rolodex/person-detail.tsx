@@ -186,11 +186,7 @@ export function PersonDetail({
                 <Button variant="ghost" size="icon" onClick={handleCancel} disabled={isSaving}>
                   <X className="h-4 w-4" />
                 </Button>
-                <Button
-                  size="icon"
-                  onClick={handleSave}
-                  disabled={isSaving}
-                >
+                <Button size="icon" onClick={handleSave} disabled={isSaving}>
                   <Save className="h-4 w-4" />
                 </Button>
               </>

@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { access } from 'node:fs/promises';
+import { access, copyFile, constants as fsConstants, unlink } from 'node:fs/promises';
 import { createServer } from 'node:http';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { URL } from 'node:url';
 import { app, BrowserWindow, ipcMain, nativeImage, shell } from 'electron';
@@ -10,6 +11,8 @@ import type { GranolaOAuthResult, OAuthIntegrationType, ProviderOAuthResult } fr
 const isDev = !app.isPackaged;
 const GRANOLA_MCP_RESOURCE = 'https://mcp.granola.ai/mcp';
 const GRANOLA_AUTH_METADATA_URL = 'https://mcp.granola.ai/.well-known/oauth-authorization-server';
+/** OIDC userinfo; issuer also publishes this at `/.well-known/openid-configuration`. */
+const GRANOLA_USERINFO_URL = 'https://mcp-auth.granola.ai/oauth2/userinfo';
 
 let mainWindow: BrowserWindow | null = null;
 let granolaOauthPromise: Promise<GranolaOAuthResult> | null = null;
@@ -67,6 +70,16 @@ const createPkceChallenge = (verifier: string) =>
 const createUrlEncodedBody = (params: Record<string, string>) =>
   new URLSearchParams(params).toString();
 
+/** Minimal page that tries to close the OAuth browser tab; the app shows success/error via toasts. */
+const OAUTH_CALLBACK_CLOSE_HTML = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Rolodex</title></head><body style="margin:0"><script>
+(function(){
+  function c(){ try { window.close(); } catch (e) {} }
+  c();
+  setTimeout(c, 50);
+  setTimeout(c, 200);
+})();
+</script></body></html>`;
+
 const fetchJson = async <T>(url: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(url, init);
 
@@ -81,6 +94,79 @@ const fetchJson = async <T>(url: string, init?: RequestInit): Promise<T> => {
   }
 
   return (await response.json()) as T;
+};
+
+const decodeGranolaIdTokenPayload = (idToken: string) => {
+  const parts = idToken.split('.');
+  if (parts.length < 2) {
+    return null;
+  }
+  try {
+    const json = Buffer.from(parts[1], 'base64url').toString('utf8');
+    return JSON.parse(json) as {
+      sub?: string;
+      email?: string;
+      name?: string;
+    };
+  } catch {
+    return null;
+  }
+};
+
+const resolveGranolaAccountIdentity = async (
+  accessToken: string,
+  idToken?: string | null
+): Promise<{
+  externalAccountId: string | null;
+  accountEmail: string | null;
+  accountLabel: string | null;
+}> => {
+  try {
+    const userInfo = await fetchJson<{
+      sub?: string;
+      email?: string;
+      name?: string;
+      preferred_username?: string;
+    }>(GRANOLA_USERINFO_URL, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    const sub = userInfo.sub?.trim() || null;
+    const email = userInfo.email?.trim() || null;
+    const label = userInfo.name?.trim() || email || userInfo.preferred_username?.trim() || null;
+    if (sub || email || label) {
+      return {
+        externalAccountId: sub,
+        accountEmail: email,
+        accountLabel: label,
+      };
+    }
+  } catch {
+    // Fall back to id_token if present.
+  }
+
+  if (idToken) {
+    const payload = decodeGranolaIdTokenPayload(idToken);
+    if (payload) {
+      const sub = payload.sub?.trim() || null;
+      const email = payload.email?.trim() || null;
+      const label = payload.name?.trim() || email || null;
+      if (sub || email || label) {
+        return {
+          externalAccountId: sub,
+          accountEmail: email,
+          accountLabel: label,
+        };
+      }
+    }
+  }
+
+  return {
+    externalAccountId: null,
+    accountEmail: null,
+    accountLabel: null,
+  };
 };
 
 const startLocalOauthCallbackServer = async (): Promise<{
@@ -117,35 +203,27 @@ const startLocalOauthCallbackServer = async (): Promise<{
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
 
         if (error) {
-          res.end(
-            `<html><body style="font-family: sans-serif; padding: 24px;"><h1>Granola connection failed</h1><p>${errorDescription || error}</p><p>You can close this window and return to Rolodex.</p></body></html>`
-          );
+          res.end(OAUTH_CALLBACK_CLOSE_HTML);
           finish();
           reject(new Error(errorDescription || error));
           return;
         }
 
         if (!code || !returnedState) {
-          res.end(
-            '<html><body style="font-family: sans-serif; padding: 24px;"><h1>Invalid callback</h1><p>Missing OAuth parameters. You can close this window and return to Rolodex.</p></body></html>'
-          );
+          res.end(OAUTH_CALLBACK_CLOSE_HTML);
           finish();
           reject(new Error('Granola OAuth callback did not include a code.'));
           return;
         }
 
         if (returnedState !== state) {
-          res.end(
-            '<html><body style="font-family: sans-serif; padding: 24px;"><h1>State mismatch</h1><p>The Granola sign-in response could not be verified.</p></body></html>'
-          );
+          res.end(OAUTH_CALLBACK_CLOSE_HTML);
           finish();
           reject(new Error('Granola OAuth state verification failed.'));
           return;
         }
 
-        res.end(
-          '<html><body style="font-family: sans-serif; padding: 24px;"><h1>Granola connected</h1><p>You can close this window and return to Rolodex.</p></body></html>'
-        );
+        res.end(OAUTH_CALLBACK_CLOSE_HTML);
         finish();
         resolve({ code });
       } catch (error) {
@@ -217,26 +295,20 @@ const startHostedOauthCallbackServer = async (options: {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
 
         if (error) {
-          res.end(
-            `<html><body style="font-family: sans-serif; padding: 24px;"><h1>${options.failureTitle}</h1><p>${errorDescription || error}</p><p>You can close this window and return to Rolodex.</p></body></html>`
-          );
+          res.end(OAUTH_CALLBACK_CLOSE_HTML);
           finish();
           reject(new Error(errorDescription || error));
           return;
         }
 
         if (!code) {
-          res.end(
-            `<html><body style="font-family: sans-serif; padding: 24px;"><h1>${options.failureTitle}</h1><p>Missing OAuth code. You can close this window and return to Rolodex.</p></body></html>`
-          );
+          res.end(OAUTH_CALLBACK_CLOSE_HTML);
           finish();
           reject(new Error('OAuth callback did not include a code.'));
           return;
         }
 
-        res.end(
-          `<html><body style="font-family: sans-serif; padding: 24px;"><h1>${options.successTitle}</h1><p>You can close this window and return to Rolodex.</p></body></html>`
-        );
+        res.end(OAUTH_CALLBACK_CLOSE_HTML);
         finish();
         resolve({ code });
       } catch (error) {
@@ -278,6 +350,7 @@ const startGranolaOAuth = async (): Promise<GranolaOAuthResult> => {
   }>(GRANOLA_AUTH_METADATA_URL);
 
   const callback = await startLocalOauthCallbackServer();
+  let oauthBrowserWindow: BrowserWindow | null = null;
 
   try {
     const registration = await fetchJson<{
@@ -308,11 +381,39 @@ const startGranolaOAuth = async (): Promise<GranolaOAuthResult> => {
     authorizationUrl.searchParams.set('code_challenge_method', 'S256');
     authorizationUrl.searchParams.set('resource', GRANOLA_MCP_RESOURCE);
 
-    await shell.openExternal(authorizationUrl.toString());
+    const oauthPartition = `temp:granola-oauth-${randomBytes(8).toString('hex')}`;
+    oauthBrowserWindow = new BrowserWindow({
+      parent: mainWindow ?? undefined,
+      modal: Boolean(mainWindow),
+      width: 520,
+      height: 800,
+      minWidth: 420,
+      minHeight: 560,
+      show: true,
+      title: 'Sign in to Granola',
+      autoHideMenuBar: true,
+      icon: nativeImage.createFromPath(appIconPath),
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        partition: oauthPartition,
+      },
+    });
+
+    try {
+      await oauthBrowserWindow.loadURL(authorizationUrl.toString());
+    } catch {
+      if (!oauthBrowserWindow.isDestroyed()) {
+        oauthBrowserWindow.close();
+      }
+      oauthBrowserWindow = null;
+      throw new Error('Failed to open Granola sign-in.');
+    }
 
     const { code } = await callback.complete;
     const tokenResponse = await fetchJson<{
       access_token: string;
+      id_token?: string;
       expires_in?: number;
       refresh_token?: string;
       scope?: string;
@@ -332,6 +433,11 @@ const startGranolaOAuth = async (): Promise<GranolaOAuthResult> => {
       }).toString(),
     });
 
+    const identity = await resolveGranolaAccountIdentity(
+      tokenResponse.access_token,
+      tokenResponse.id_token
+    );
+
     return {
       accessToken: tokenResponse.access_token,
       clientId: registration.client_id,
@@ -341,10 +447,17 @@ const startGranolaOAuth = async (): Promise<GranolaOAuthResult> => {
       expiresAt: tokenResponse.expires_in
         ? new Date(Date.now() + tokenResponse.expires_in * 1000).toISOString()
         : null,
+      externalAccountId: identity.externalAccountId,
+      accountEmail: identity.accountEmail,
+      accountLabel: identity.accountLabel,
     };
   } catch (error) {
     callback.close();
     throw error;
+  } finally {
+    if (oauthBrowserWindow && !oauthBrowserWindow.isDestroyed()) {
+      oauthBrowserWindow.close();
+    }
   }
 };
 
@@ -557,19 +670,99 @@ ipcMain.handle('integrations:provider-oauth', async (_event, type: OAuthIntegrat
   return providerOauthPromise;
 });
 
-ipcMain.handle('integrations:imessage-validate-path', async (_event, inputPath: string) => {
-  const candidate = inputPath.trim();
+const resolveMessagesDbPath = (raw: string) => {
+  let t = raw.trim().replace(/^\uFF5E/, '~');
+  if (!t) {
+    return t;
+  }
+  if (t.startsWith('~/')) {
+    const rest = t.slice(2).replace(/^[/\\]+/, '');
+    return join(homedir(), rest);
+  }
+  if (t.startsWith('~\\')) {
+    const rest = t.slice(2).replace(/^[/\\]+/, '');
+    return join(homedir(), rest);
+  }
+  if (t === '~') {
+    return homedir();
+  }
+  return t;
+};
+
+ipcMain.handle('integrations:open-full-disk-access-settings', async () => {
+  if (process.platform !== 'darwin') {
+    return;
+  }
+  await shell.openExternal(
+    'x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles'
+  );
+});
+
+ipcMain.handle('integrations:imessage-validate-path', async (_event, inputPath: unknown) => {
+  const raw = typeof inputPath === 'string' ? inputPath : String(inputPath ?? '');
+  let candidate = resolveMessagesDbPath(raw);
 
   if (!candidate) {
     throw new Error('A Messages database path is required.');
   }
 
-  await access(candidate);
+  const tmpName = join(tmpdir(), `rolodex-chatdb-probe-${randomBytes(12).toString('hex')}.db`);
 
-  return {
-    path: candidate,
-    valid: true,
+  const mapCopyError = (e: unknown): Error => {
+    if (e instanceof Error) {
+      if (
+        e.message.startsWith('Messages database not found') ||
+        e.message.startsWith('Cannot read Messages chat.db')
+      ) {
+        return e;
+      }
+    }
+    const err = e as NodeJS.ErrnoException;
+    if (err.code === 'ENOENT') {
+      return new Error('Messages database not found at that path.');
+    }
+    if (err.code === 'EACCES' || err.code === 'EPERM') {
+      return new Error(
+        'Cannot read Messages chat.db. On macOS, grant Rolodex Full Disk Access in System Settings → Privacy & Security, then try again.'
+      );
+    }
+    return new Error(err.message || 'Unable to access the Messages database.');
   };
+
+  try {
+    if (process.platform === 'darwin') {
+      try {
+        await copyFile(candidate, tmpName, fsConstants.COPYFILE_FICLONE);
+      } catch (first) {
+        const err = first as NodeJS.ErrnoException;
+        if (err.code === 'EINVAL' || err.code === 'ENOTSUP' || err.code === 'ENOSYS') {
+          await unlink(tmpName).catch(() => undefined);
+          try {
+            await copyFile(candidate, tmpName);
+          } catch (second) {
+            throw mapCopyError(second);
+          }
+        } else {
+          throw mapCopyError(first);
+        }
+      }
+    } else {
+      try {
+        await copyFile(candidate, tmpName);
+      } catch (e) {
+        throw mapCopyError(e);
+      }
+    }
+
+    await access(tmpName, fsConstants.R_OK);
+
+    return {
+      path: candidate,
+      valid: true,
+    };
+  } finally {
+    await unlink(tmpName).catch(() => undefined);
+  }
 });
 
 ipcMain.handle(

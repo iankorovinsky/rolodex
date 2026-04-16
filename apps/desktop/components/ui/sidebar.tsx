@@ -40,6 +40,7 @@ type SidebarContextProps = {
   toggleSidebar: () => void;
   sidebarWidth: string;
   setSidebarWidth: (width: string) => void;
+  previewSidebarWidth: (width: string) => void;
 };
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null);
@@ -70,15 +71,30 @@ function SidebarProvider({
 }) {
   const isMobile = useIsMobile();
   const [openMobile, setOpenMobile] = React.useState(false);
+  const wrapperRef = React.useRef<HTMLDivElement>(null);
 
   // Use the defaultWidth prop (can be set from cookie on server)
   const [sidebarWidth, setSidebarWidthState] = React.useState<string>(defaultWidth);
+  const sidebarWidthRef = React.useRef(sidebarWidth);
 
-  const setSidebarWidth = React.useCallback((width: string) => {
-    setSidebarWidthState(width);
-    // Store in cookie so server can read it
-    document.cookie = `${SIDEBAR_WIDTH_COOKIE_NAME}=${width}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+  const previewSidebarWidth = React.useCallback((width: string) => {
+    sidebarWidthRef.current = width;
+    wrapperRef.current?.style.setProperty('--sidebar-width', width);
   }, []);
+
+  const setSidebarWidth = React.useCallback(
+    (width: string) => {
+      previewSidebarWidth(width);
+      setSidebarWidthState(width);
+      // Store in cookie so server can read it
+      document.cookie = `${SIDEBAR_WIDTH_COOKIE_NAME}=${width}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+    },
+    [previewSidebarWidth]
+  );
+
+  React.useEffect(() => {
+    sidebarWidthRef.current = sidebarWidth;
+  }, [sidebarWidth]);
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -132,6 +148,7 @@ function SidebarProvider({
       toggleSidebar,
       sidebarWidth,
       setSidebarWidth,
+      previewSidebarWidth,
     }),
     [
       state,
@@ -143,6 +160,7 @@ function SidebarProvider({
       toggleSidebar,
       sidebarWidth,
       setSidebarWidth,
+      previewSidebarWidth,
     ]
   );
 
@@ -150,6 +168,7 @@ function SidebarProvider({
     <SidebarContext.Provider value={contextValue}>
       <TooltipProvider delayDuration={0}>
         <div
+          ref={wrapperRef}
           data-slot="sidebar-wrapper"
           style={
             {
@@ -235,7 +254,7 @@ function Sidebar({
       <div
         data-slot="sidebar-gap"
         className={cn(
-          'relative w-[var(--sidebar-width)] bg-transparent transition-[width] duration-200 ease-linear',
+          'relative w-[var(--sidebar-width)] bg-transparent',
           'group-data-[collapsible=offcanvas]:w-0',
           'group-data-[side=right]:rotate-180',
           variant === 'floating' || variant === 'inset'
@@ -246,7 +265,7 @@ function Sidebar({
       <div
         data-slot="sidebar-container"
         className={cn(
-          'fixed inset-y-0 z-10 hidden h-screen w-[var(--sidebar-width)] transition-[left,right,width] duration-200 ease-linear md:flex',
+          'fixed inset-y-0 z-10 hidden h-screen w-[var(--sidebar-width)] md:flex',
           side === 'left'
             ? 'left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]'
             : 'right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]',
@@ -293,63 +312,90 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<t
 }
 
 function SidebarRail({ className, ...props }: React.ComponentProps<'button'>) {
-  const { toggleSidebar, sidebarWidth, setSidebarWidth } = useSidebar();
+  const { toggleSidebar, sidebarWidth, setSidebarWidth, previewSidebarWidth } = useSidebar();
   const [isDragging, setIsDragging] = React.useState(false);
   const hasDraggedRef = React.useRef(false);
-  const [startX, setStartX] = React.useState(0);
-  const [startWidth, setStartWidth] = React.useState(0);
+  const dragStateRef = React.useRef({ startX: 0, startWidth: 0 });
+  const pendingWidthRef = React.useRef(sidebarWidth);
 
-  const handleMouseDown = React.useCallback(
-    (e: React.MouseEvent) => {
+  const getRootFontSize = React.useCallback(() => {
+    const fontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+    return Number.isFinite(fontSize) && fontSize > 0 ? fontSize : 16;
+  }, []);
+
+  const handlePointerDown = React.useCallback(
+    (e: React.PointerEvent<HTMLButtonElement>) => {
       e.preventDefault();
       e.stopPropagation();
+      e.currentTarget.setPointerCapture(e.pointerId);
       setIsDragging(true);
       hasDraggedRef.current = false;
-      setStartX(e.clientX);
-      // Convert sidebar width from rem to pixels
-      const currentWidthPx = parseFloat(sidebarWidth) * 16;
-      setStartWidth(currentWidthPx);
+      dragStateRef.current = {
+        startX: e.clientX,
+        startWidth: parseFloat(sidebarWidth) * getRootFontSize(),
+      };
+      pendingWidthRef.current = sidebarWidth;
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
+      document.body.dataset.sidebarResizing = 'true';
     },
-    [sidebarWidth]
+    [getRootFontSize, sidebarWidth]
+  );
+
+  const finishDrag = React.useCallback(() => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    delete document.body.dataset.sidebarResizing;
+
+    if (hasDraggedRef.current) {
+      setSidebarWidth(pendingWidthRef.current);
+    }
+  }, [isDragging, setSidebarWidth]);
+
+  const handlePointerMove = React.useCallback(
+    (e: React.PointerEvent<HTMLButtonElement>) => {
+      if (!isDragging) return;
+
+      const diff = e.clientX - dragStateRef.current.startX;
+
+      if (Math.abs(diff) > 3) {
+        hasDraggedRef.current = true;
+      }
+
+      let newWidthPx = dragStateRef.current.startWidth + diff;
+      newWidthPx = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, newWidthPx));
+
+      const newWidth = `${newWidthPx / getRootFontSize()}rem`;
+      pendingWidthRef.current = newWidth;
+      previewSidebarWidth(newWidth);
+    },
+    [getRootFontSize, isDragging, previewSidebarWidth]
+  );
+
+  const handlePointerUp = React.useCallback(
+    (e: React.PointerEvent<HTMLButtonElement>) => {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+      finishDrag();
+    },
+    [finishDrag]
   );
 
   React.useEffect(() => {
     if (!isDragging) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const diff = e.clientX - startX;
-
-      // If mouse moved more than 3px, consider it a drag
-      if (Math.abs(diff) > 3) {
-        hasDraggedRef.current = true;
-      }
-
-      let newWidthPx = startWidth + diff;
-
-      // Clamp between min and max width
-      newWidthPx = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, newWidthPx));
-
-      // Convert back to rem
-      const newWidthRem = newWidthPx / 16;
-      setSidebarWidth(`${newWidthRem}rem`);
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    const handleWindowPointerUp = () => finishDrag();
+    window.addEventListener('pointerup', handleWindowPointerUp);
+    window.addEventListener('pointercancel', handleWindowPointerUp);
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('pointerup', handleWindowPointerUp);
+      window.removeEventListener('pointercancel', handleWindowPointerUp);
     };
-  }, [isDragging, startX, startWidth, setSidebarWidth]);
+  }, [finishDrag, isDragging]);
 
   const handleClick = React.useCallback(() => {
     // Only toggle if we haven't dragged
@@ -364,9 +410,12 @@ function SidebarRail({ className, ...props }: React.ComponentProps<'button'>) {
     <button
       data-sidebar="rail"
       data-slot="sidebar-rail"
+      data-dragging={isDragging ? 'true' : undefined}
       aria-label="Resize Sidebar"
       tabIndex={-1}
-      onMouseDown={handleMouseDown}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
       onClick={handleClick}
       title="Resize Sidebar"
       className={cn(
@@ -549,7 +598,7 @@ const sidebarMenuButtonVariants = cva(
       variant: {
         default: 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
         outline:
-          'bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]',
+          'bg-background shadow-[0_0_0_1px_var(--sidebar-border)] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_var(--sidebar-accent)]',
       },
       size: {
         default: 'h-8 text-sm',

@@ -90,23 +90,6 @@ export function ComboboxCreatable({
 
   return (
     <div ref={containerRef} className="space-y-2">
-      {selectedOptions.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {selectedOptions.map((option) => (
-            <Badge key={option.value} variant="outline" className="gap-1 pr-1">
-              {option.label}
-              <button
-                type="button"
-                onClick={() => handleRemove(option.value)}
-                className="rounded-full p-0.5 hover:bg-accent"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
-        </div>
-      )}
-
       <div className="relative">
         <Input
           ref={inputRef}
@@ -134,9 +117,7 @@ export function ComboboxCreatable({
 
               {canCreate && (
                 <>
-                  {filteredOptions.length > 0 && (
-                    <div className="my-1 h-px bg-border" />
-                  )}
+                  {filteredOptions.length > 0 && <div className="my-1 h-px bg-border" />}
                   <button
                     type="button"
                     onClick={() => handleSelect(query.trim(), true)}
@@ -151,6 +132,23 @@ export function ComboboxCreatable({
           </div>
         )}
       </div>
+
+      {selectedOptions.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {selectedOptions.map((option) => (
+            <Badge key={option.value} variant="outline" className="gap-1 pr-1">
+              {option.label}
+              <button
+                type="button"
+                onClick={() => handleRemove(option.value)}
+                className="rounded-full p-0.5 hover:bg-accent"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

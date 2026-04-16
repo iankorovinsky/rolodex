@@ -3,13 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { PersonForm, type PersonFormValues } from '@/components/rolodex/person-form';
 import { createPerson, createTag, getTags } from '@/lib/rolodex/api';
 import type { CreatePersonRequest, Person, Tag } from '@rolodex/types';
@@ -189,7 +183,11 @@ export function AddPersonSheet({
             tags={availableTags}
             onSubmit={handleCreatePerson}
             onCancel={() => setIsOpen(false)}
-            onTagCreated={(tag) => setAvailableTags((prev) => [...prev, tag].sort((a, b) => a.name.localeCompare(b.name)))}
+            onTagCreated={(tag) =>
+              setAvailableTags((prev) =>
+                [...prev, tag].sort((a, b) => a.name.localeCompare(b.name))
+              )
+            }
             isLoading={isCreating || isTagsLoading}
           />
         </div>

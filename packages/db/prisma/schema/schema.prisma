@@ -38,11 +38,13 @@ enum IntegrationConnectionStatus {
 model User {
   id           String            @id @db.Uuid
   email        String            @unique
-  name         String?
+  firstName    String?
+  lastName     String?
   avatarId     AvatarId?
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
   people       Person[]
+  companies    Company[]
   tags         Tag[]
   syncCursors  UserSyncCursor[]
   deviceTokens UserDeviceToken[]
@@ -239,17 +241,36 @@ model PersonCalendarEvent {
 model Role {
   id        String   @id @default(uuid()) @db.Uuid
   personId  String   @db.Uuid
+  companyId String?  @db.Uuid
   title     String
   company   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  person        Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  companyRecord Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   @@index([personId])
+  @@index([companyId])
   @@index([title])
   @@index([company])
   @@map("roles")
+}
+
+model Company {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roles Role[]
+
+  @@unique([userId, name])
+  @@index([userId, deletedAt])
+  @@map("companies")
 }
 
 model Tag {
@@ -301,6 +322,7 @@ model Request {
   parentId    String?     @db.Uuid
   type        RequestType
   description String
+  position    Int?
   completed   Boolean     @default(false)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -314,6 +336,7 @@ model Request {
   @@index([completed])
   @@index([parentId])
   @@index([personId, type, completed])
+  @@index([personId, type, completed, position])
   @@map("requests")
 }
 
@@ -371,7 +394,7 @@ model Scout {
   relevanceWindow   ScoutRelevanceWindow
   recipientEmails   Json
   status            ScoutStatus          @default(ACTIVE)
-  triggerScheduleId String?
+  scheduleId        String?
   nextRunAt         DateTime?
   lastRunAt         DateTime?
   lastSuccessAt     DateTime?

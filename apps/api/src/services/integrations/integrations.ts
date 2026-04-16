@@ -1,9 +1,4 @@
-import {
-  IntegrationConnectionStatus,
-  IntegrationProvider,
-  Prisma,
-  prisma,
-} from '@rolodex/db';
+import { IntegrationConnectionStatus, IntegrationProvider, Prisma, prisma } from '@rolodex/db';
 import type {
   ConnectGranolaIntegrationRequest,
   ConnectOAuthIntegrationRequest,
@@ -264,9 +259,8 @@ export const listUserIntegrations = async (userId: string): Promise<IntegrationC
                     currentIntegration.metadata &&
                       typeof currentIntegration.metadata === 'object' &&
                       !Array.isArray(currentIntegration.metadata)
-                      ? ((currentIntegration.metadata as { oauthClientId?: unknown }).oauthClientId as
-                          | string
-                          | undefined)
+                      ? ((currentIntegration.metadata as { oauthClientId?: unknown })
+                          .oauthClientId as string | undefined)
                       : undefined
                   ),
                   lastValidatedAt: new Date(),
@@ -300,16 +294,34 @@ export const connectGranolaIntegration = async (
 
   const metadata = await refreshGranolaMetadata(input.accessToken, input.clientId);
   const now = new Date();
-  const existing = await prisma.userIntegration.findFirst({
-    where: {
-      userId,
-      provider: IntegrationProvider.GRANOLA,
-      disconnectedAt: null,
-    },
-  });
+
+  const externalAccountId = input.externalAccountId?.trim() || null;
+  const accountEmail = input.accountEmail?.trim() || null;
+  const accountLabel = input.accountLabel?.trim() || accountEmail || 'Granola';
+
+  const existing = externalAccountId
+    ? await prisma.userIntegration.findFirst({
+        where: {
+          userId,
+          provider: IntegrationProvider.GRANOLA,
+          externalAccountId,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      })
+    : await prisma.userIntegration.findFirst({
+        where: {
+          userId,
+          provider: IntegrationProvider.GRANOLA,
+          disconnectedAt: null,
+        },
+      });
 
   const data = {
-    accountLabel: 'Granola',
+    externalAccountId,
+    accountEmail,
+    accountLabel,
     accessToken: encryptIntegrationToken(input.accessToken),
     refreshToken: encryptIntegrationToken(input.refreshToken || null),
     tokenScope: input.scope || null,

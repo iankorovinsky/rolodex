@@ -8,12 +8,14 @@ import { ensureUser, updateUserProfile } from '../services/user';
 const toUserProfile = (user: {
   id: string;
   email: string;
-  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
   avatarId: AvatarId | null;
 }): UserProfile => ({
   id: user.id,
   email: user.email,
-  name: user.name,
+  firstName: user.firstName,
+  lastName: user.lastName,
   avatarId: user.avatarId,
 });
 
@@ -39,10 +41,11 @@ export const updateCurrentUserProfile = async (req: Request, res: Response, next
   try {
     await ensureUser(authUser);
 
-    const name = body.name?.trim();
+    const firstName = body.firstName?.trim();
+    const lastName = body.lastName?.trim() || null;
 
-    if (!name) {
-      throw createAppError('A name is required.', 400);
+    if (!firstName) {
+      throw createAppError('A firstName is required.', 400);
     }
 
     if (!body.avatarId || !Object.values(AvatarId).includes(body.avatarId as AvatarId)) {
@@ -50,7 +53,8 @@ export const updateCurrentUserProfile = async (req: Request, res: Response, next
     }
 
     const user = await updateUserProfile(userId, {
-      name,
+      firstName,
+      lastName,
       avatarId: body.avatarId as AvatarId,
     });
     const response: ApiResponse<UserProfile> = {

@@ -73,7 +73,7 @@ export function PersonRoute() {
 
   const handleDelete = async () => {
     await deletePerson(id);
-    navigate('/app');
+    navigate('/app/rolodex');
   };
 
   const handleAddRequest = async (description: string, type: 'ASK' | 'FAVOUR') => {
@@ -148,7 +148,7 @@ export function PersonRoute() {
       <div className="flex-1 p-8">
         <div className="mx-auto max-w-2xl py-12 text-center">
           <p className="text-muted-foreground">Person not found</p>
-          <Button variant="link" onClick={() => navigate('/app')}>
+          <Button variant="link" onClick={() => navigate('/app/rolodex')}>
             Back to Rolodex
           </Button>
         </div>
@@ -160,7 +160,7 @@ export function PersonRoute() {
     <PersonDetail
       person={person}
       tags={tags}
-      onBack={() => navigate('/app')}
+      onBack={() => navigate('/app/rolodex')}
       onUpdate={handleUpdate}
       onDelete={handleDelete}
       onAddRequest={handleAddRequest}

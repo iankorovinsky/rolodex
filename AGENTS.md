@@ -6,7 +6,7 @@
 - `apps/api/`: Bun + Express API.
 - `packages/db/`: Prisma schema and generated client.
 - `packages/types/`: Shared TypeScript types; define most shared types here.
-- `packages/jobs/`: Trigger.dev background tasks.
+- `packages/jobs/`: Temporal workflows and worker code.
 - `tools/scripts/`: Repo utilities (e.g., dev TUI).
 - Root configs: `package.json`, `turbo.json`, `tsconfig.base.json`.
 
@@ -25,7 +25,7 @@
 - `bun run ci`: local equivalent of CI checks; run after any change to confirm build and checks pass.
 - Desktop packaging: `bun run --filter '@rolodex/desktop' dist:dir`, `dist:mac`, `dist:win`, `dist:linux`.
 - Database: `bun run db:generate`, `bun run db:migrate`, `bun run db:studio`, `bun run db:format`.
-- Trigger.dev: `bunx trigger.dev login`, `bun run trigger:dev`, `bun run trigger:deploy`.
+- Temporal: `bun run temporal:dev`, `bun run temporal:worker`.
 
 ## Coding Style & Naming Conventions
 
@@ -53,7 +53,7 @@
 
 - The app is segmented per-user; ensure data access and UI behavior respect user boundaries.
 - Prefer concise, MVP-focused solutions over overcomplicated designs.
-- Trigger.dev tasks live in `packages/jobs/src/` with config in `trigger.config.ts`. Deploys happen on push to `staging` and require `TRIGGER_ACCESS_TOKEN`.
+- Temporal workflows and the worker live in `packages/jobs/src/`.
 
 ## Configuration Notes
 
@@ -63,7 +63,7 @@
 - Server-side Supabase verification uses plain `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`.
 - Runner CLI defaults use `ROLODEX_DEVICE_TOKEN` and `ROLODEX_MESSAGES_DB_PATH`.
 - Use `.env.example` as the template for new environments.
-- Trigger.dev requires `TRIGGER_ACCESS_TOKEN` for task execution.
+- Local Temporal development uses `TEMPORAL_ADDRESS` and `TEMPORAL_NAMESPACE` when overrides are needed.
 
 ## Database Migration Policy
 

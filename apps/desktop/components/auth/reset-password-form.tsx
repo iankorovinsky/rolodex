@@ -118,7 +118,7 @@ export function ResetPasswordForm() {
           <Input
             id="new-password"
             type="password"
-            placeholder="new password"
+            placeholder="Choose a new password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
@@ -137,7 +137,12 @@ export function ResetPasswordForm() {
                     requirement.met ? 'text-emerald-300' : 'text-white/78'
                   )}
                 >
-                  <Icon className={cn('h-4 w-4', requirement.met ? 'text-emerald-300' : 'text-white/55')} />
+                  <Icon
+                    className={cn(
+                      'h-4 w-4',
+                      requirement.met ? 'text-emerald-300' : 'text-white/55'
+                    )}
+                  />
                   <span>{requirement.label}</span>
                 </div>
               );
@@ -148,7 +153,7 @@ export function ResetPasswordForm() {
           <Input
             id="confirm-password"
             type="password"
-            placeholder="confirm password"
+            placeholder="Confirm new password"
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
             required
@@ -169,7 +174,10 @@ export function ResetPasswordForm() {
 
       <p className="text-center text-sm text-white/88">
         back to{' '}
-        <Link to="/login" className="font-medium text-white underline decoration-white/50 underline-offset-4">
+        <Link
+          to="/login"
+          className="font-medium text-white underline decoration-white/50 underline-offset-4"
+        >
           sign in
         </Link>
       </p>

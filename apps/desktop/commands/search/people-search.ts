@@ -87,7 +87,8 @@ export async function searchPeopleCommands({
 
   return people
     .sort((a, b) => {
-      const rankDelta = rankPersonAgainstQuery(a, normalizedQuery) - rankPersonAgainstQuery(b, normalizedQuery);
+      const rankDelta =
+        rankPersonAgainstQuery(a, normalizedQuery) - rankPersonAgainstQuery(b, normalizedQuery);
       if (rankDelta !== 0) {
         return rankDelta;
       }

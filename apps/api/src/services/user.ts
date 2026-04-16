@@ -4,37 +4,47 @@ import { prisma } from '@rolodex/db';
 interface EnsureUserInput {
   id: string;
   email: string;
-  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
 }
 
-export const ensureUser = async ({ id, email, name }: EnsureUserInput): Promise<User> => {
+export const ensureUser = async ({
+  id,
+  email,
+  firstName,
+  lastName,
+}: EnsureUserInput): Promise<User> => {
   return prisma.user.upsert({
     where: { id },
     create: {
       id,
       email,
-      name,
+      firstName,
+      lastName,
     },
+    // Do not sync names from Supabase on every request — profile is source of truth in DB.
+    // JWT user_metadata can stay stale after the user updates their Rolodex profile.
     update: {
       email,
-      name,
     },
   });
 };
 
 interface UpdateUserProfileInput {
-  name: string;
+  firstName: string;
+  lastName: string | null;
   avatarId: AvatarId;
 }
 
 export const updateUserProfile = async (
   userId: string,
-  { name, avatarId }: UpdateUserProfileInput
+  { firstName, lastName, avatarId }: UpdateUserProfileInput
 ): Promise<User> => {
   return prisma.user.update({
     where: { id: userId },
     data: {
-      name,
+      firstName,
+      lastName,
       avatarId,
     },
   });

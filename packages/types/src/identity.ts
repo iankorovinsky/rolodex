@@ -20,5 +20,6 @@ export const normalizePhoneNumber = (value: string) => {
   return value.trim().startsWith('+') ? `+${digits}` : `+${digits}`;
 };
 
-export const dedupeNormalizedValues = (values: string[], normalize: (value: string) => string) =>
-  [...new Set(values.map(normalize).filter(Boolean))];
+export const dedupeNormalizedValues = (values: string[], normalize: (value: string) => string) => [
+  ...new Set(values.map(normalize).filter(Boolean)),
+];

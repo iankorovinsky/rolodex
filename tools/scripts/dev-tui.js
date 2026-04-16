@@ -8,11 +8,13 @@ const path = require('path');
 
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
-const PROCESS_NAMES = ['desktop', 'api', 'trigger', 'db'];
+const PROCESS_NAMES = ['desktop', 'storybook', 'api', 'temporal', 'worker', 'db'];
 const PROCESS_COLORS = {
   desktop: 'cyan',
+  storybook: 'white',
   api: 'magenta',
-  trigger: 'yellow',
+  temporal: 'yellow',
+  worker: 'blue',
   db: 'green',
 };
 const MAX_LOG_LINES = 2000;
@@ -28,7 +30,7 @@ Usage:
 
 Controls:
   Up / Down       Switch selected process
-  1-4             Jump directly to desktop/api/trigger/db
+  1-6             Jump directly to desktop/storybook/api/temporal/worker/db
   Mouse click     Switch process
   Mouse wheel     Scroll logs
   Page Up/Down    Scroll logs faster
@@ -156,8 +158,7 @@ const appendLogLine = (name, line) => {
     return;
   }
 
-  const wasPinnedToBottom =
-    name === currentView ? logPane.getScrollPerc() >= 99 : false;
+  const wasPinnedToBottom = name === currentView ? logPane.getScrollPerc() >= 99 : false;
 
   const buffer = logBuffers[name];
   buffer.push(line);
@@ -200,9 +201,11 @@ const pipeProcessOutput = (name, proc) => {
 
 const spawnOpts = { stdio: 'pipe', env: { ...process.env } };
 const processes = {
-  desktop: spawn('bun', ['dev'], { ...spawnOpts, cwd: 'apps/desktop' }),
-  api: spawn('bun', ['dev'], { ...spawnOpts, cwd: 'apps/api' }),
-  trigger: spawn('bunx', ['trigger.dev@4.3.3', 'dev'], spawnOpts),
+  desktop: spawn('bun', ['run', 'dev'], { ...spawnOpts, cwd: 'apps/desktop' }),
+  storybook: spawn('bun', ['run', 'storybook'], { ...spawnOpts, cwd: 'apps/desktop' }),
+  api: spawn('bun', ['run', 'dev'], { ...spawnOpts, cwd: 'apps/api' }),
+  temporal: spawn(process.execPath, [path.resolve(__dirname, 'start-temporal-dev.mjs')], spawnOpts),
+  worker: spawn('bun', ['run', '--filter', '@rolodex/jobs', 'dev'], spawnOpts),
   db: spawn('bun', ['run', 'generate'], { ...spawnOpts, cwd: 'packages/db' }),
 };
 
@@ -297,7 +300,7 @@ screen.key(['escape'], () => {
   ensureMouseMode();
   screen.render();
 });
-screen.key(['1', '2', '3', '4'], (_, key) => {
+screen.key(['1', '2', '3', '4', '5', '6'], (_, key) => {
   const index = Number(key.full) - 1;
   const selected = PROCESS_NAMES[index];
 

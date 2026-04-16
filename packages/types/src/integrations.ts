@@ -39,6 +39,10 @@ export interface ConnectGranolaIntegrationRequest {
   tokenType?: string | null;
   scope?: string | null;
   expiresAt?: string | null;
+  /** OIDC `sub` from Granola; used as stable account key when present. */
+  externalAccountId?: string | null;
+  accountLabel?: string | null;
+  accountEmail?: string | null;
 }
 
 export interface ConnectOAuthIntegrationRequest {
@@ -59,6 +63,9 @@ export interface GranolaOAuthResult {
   tokenType?: string | null;
   scope?: string | null;
   expiresAt?: string | null;
+  externalAccountId?: string | null;
+  accountLabel?: string | null;
+  accountEmail?: string | null;
 }
 
 export interface ProviderOAuthResult {

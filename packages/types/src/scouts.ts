@@ -32,7 +32,7 @@ export interface Scout {
   relevanceWindow: ScoutRelevanceWindow;
   recipientEmails: string[];
   status: ScoutStatus;
-  triggerScheduleId: string | null;
+  scheduleId: string | null;
   nextRunAt: string | null;
   lastRunAt: string | null;
   lastSuccessAt: string | null;

@@ -46,7 +46,7 @@ export function LoginForm() {
           <Input
             id="email"
             type="email"
-            placeholder="you@hackthenorth.com"
+            placeholder="you@rolodex.app"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -57,7 +57,7 @@ export function LoginForm() {
           <Input
             id="password"
             type="password"
-            placeholder="b3sT-h4ck4th0n-EveR!"
+            placeholder="Your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -76,7 +76,10 @@ export function LoginForm() {
 
       <p className="text-center text-sm text-white/88">
         don&apos;t have an account?{' '}
-        <Link to="/signup" className="font-medium text-white underline decoration-white/50 underline-offset-4">
+        <Link
+          to="/signup"
+          className="font-medium text-white underline decoration-white/50 underline-offset-4"
+        >
           sign up
         </Link>
       </p>

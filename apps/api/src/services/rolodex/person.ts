@@ -9,9 +9,15 @@ import type {
 } from '@rolodex/types';
 import { dedupeNormalizedValues, normalizeEmail, normalizePhoneNumber } from '@rolodex/types';
 import { createAppError } from '../../utils/errors';
+import { ensureRoleCompaniesBackfilled, resolveRoleCompany } from './company';
+import { ensureRequestPositions } from './request';
 
 const personInclude = {
-  roles: true,
+  roles: {
+    include: {
+      companyRecord: true,
+    },
+  },
   tags: {
     include: {
       tag: true,
@@ -35,7 +41,9 @@ const personInclude = {
     },
   },
   notes: true,
-  requests: true,
+  requests: {
+    orderBy: [{ position: 'asc' as const }, { createdAt: 'asc' as const }, { id: 'asc' as const }],
+  },
 } satisfies Prisma.PersonInclude;
 
 type PersonWithRelations = Prisma.PersonGetPayload<{
@@ -43,9 +51,14 @@ type PersonWithRelations = Prisma.PersonGetPayload<{
 }>;
 
 const mapPerson = (person: PersonWithRelations): Person => {
-  const { tags, ...rest } = person;
+  const { tags, roles, ...rest } = person;
   return {
     ...rest,
+    roles: roles.map((role) => ({
+      ...role,
+      company: role.companyRecord?.name ?? role.company ?? null,
+      companyRecord: role.companyRecord,
+    })),
     tags: tags.map((personTag) => personTag.tag),
   };
 };
@@ -72,6 +85,7 @@ const normalizeRoles = (roles: RoleInput[] | undefined) =>
     ?.map((role) => ({
       title: role.title.trim(),
       company: role.company?.trim() || undefined,
+      companyId: role.companyId?.trim() || undefined,
     }))
     .filter((role) => role.title.length > 0) ?? [];
 
@@ -83,6 +97,9 @@ const normalizePhoneNumbers = (phoneNumbers: string[] | undefined) =>
   dedupeNormalizedValues(phoneNumbers ?? [], normalizePhoneNumber);
 
 export const listPeople = async (userId: string, filters: PeopleFilters) => {
+  await ensureRoleCompaniesBackfilled(userId);
+  await ensureRequestPositions(userId);
+
   const where: Prisma.PersonWhereInput = {
     userId,
     deletedAt: null,
@@ -124,6 +141,17 @@ export const listPeople = async (userId: string, filters: PeopleFilters) => {
           },
         },
       },
+      {
+        roles: {
+          some: {
+            companyRecord: {
+              is: {
+                name: { contains: search, mode: 'insensitive' },
+              },
+            },
+          },
+        },
+      },
     ];
   }
 
@@ -147,6 +175,9 @@ export const listPeople = async (userId: string, filters: PeopleFilters) => {
 };
 
 export const getPersonById = async (userId: string, id: string) => {
+  await ensureRoleCompaniesBackfilled(userId);
+  await ensureRequestPositions(userId);
+
   const person = await prisma.person.findFirst({
     where: {
       id,
@@ -165,6 +196,13 @@ export const createPerson = async (userId: string, data: CreatePersonRequest) =>
   const emails = normalizeEmails(data.emails);
   const phoneNumbers = normalizePhoneNumbers(data.phoneNumbers);
   await validateTagIds(userId, tagIds);
+
+  const resolvedRoles = await Promise.all(
+    roles.map(async (role) => ({
+      title: role.title,
+      ...(await resolveRoleCompany(prisma, userId, role)),
+    }))
+  );
 
   const person = await prisma.person.create({
     data: {
@@ -191,9 +229,9 @@ export const createPerson = async (userId: string, data: CreatePersonRequest) =>
             })),
           }
         : undefined,
-      roles: roles.length
+      roles: resolvedRoles.length
         ? {
-            create: roles,
+            create: resolvedRoles,
           }
         : undefined,
       tags: tagIds.length
@@ -226,6 +264,16 @@ export const updatePerson = async (userId: string, id: string, data: UpdatePerso
     await validateTagIds(userId, tagIds);
   }
 
+  const resolvedRoles =
+    roles !== undefined
+      ? await Promise.all(
+          roles.map(async (role) => ({
+            title: role.title,
+            ...(await resolveRoleCompany(prisma, userId, role)),
+          }))
+        )
+      : undefined;
+
   const person = await prisma.person.update({
     where: { id },
     data: {
@@ -256,10 +304,10 @@ export const updatePerson = async (userId: string, id: string, data: UpdatePerso
             }
           : undefined,
       roles:
-        roles !== undefined
+        resolvedRoles !== undefined
           ? {
               deleteMany: {},
-              create: roles,
+              create: resolvedRoles,
             }
           : undefined,
       tags: tagIds

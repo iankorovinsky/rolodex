@@ -48,7 +48,7 @@ const baseScoutRecord = {
   relevanceWindow: 'DAY',
   recipientEmails: ['team@example.com'],
   status: 'ACTIVE',
-  triggerScheduleId: 'schedule-1',
+  scheduleId: 'schedule-1',
   nextRunAt: new Date('2026-04-03T13:00:00.000Z'),
   lastRunAt: null,
   lastSuccessAt: null,

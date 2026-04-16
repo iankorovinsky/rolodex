@@ -118,7 +118,9 @@ export function RolodexIndexRoute() {
         ) : (
           <div className="py-12 text-center">
             <p className="text-muted-foreground">
-              {hasFilters ? 'No people match your search' : 'No people yet. Add someone to get started.'}
+              {hasFilters
+                ? 'No people match your search'
+                : 'No people yet. Add someone to get started.'}
             </p>
           </div>
         )}

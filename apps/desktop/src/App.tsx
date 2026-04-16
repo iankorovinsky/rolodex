@@ -1,8 +1,11 @@
+import { useEffect } from 'react';
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider, useAuth } from '@/lib/auth/auth-context';
 import { CommandPaletteProvider } from '@/commands/provider';
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { hasCompletedGettingStarted, resetGettingStartedForDev } from '@/lib/onboarding';
 import { HomeRoute } from './routes/home-route';
 import { LoginRoute } from './routes/login-route';
 import { SignupRoute } from './routes/signup-route';
@@ -13,18 +16,13 @@ import { PersonRoute } from './routes/person-route';
 import { AvatarOnboardingRoute } from './routes/avatar-onboarding-route';
 import { SettingsRoute } from './routes/settings-route';
 import { ScoutsRoute } from './routes/scouts-route';
+import { RolodexIndexRoute } from './routes/rolodex-index-route';
+import { GettingStartedRoute } from './routes/getting-started-route';
 
 function AppLoadingShell() {
   return (
     <SidebarProvider>
-      <AppSidebar
-        user={{
-          id: 'loading',
-          email: 'loading@rolodex.app',
-          name: 'Loading',
-          avatarId: 'CAT',
-        }}
-      />
+      <AppSidebar loading />
       <SidebarInset>
         <div className="min-h-screen bg-background p-8">
           <div className="mx-auto max-w-4xl space-y-6">
@@ -48,11 +46,14 @@ function ProtectedLayout() {
   const { user, loading } = useAuth();
   const location = useLocation();
   const isAvatarOnboardingRoute = location.pathname === '/app/onboarding/avatar';
-  const needsOnboarding = !user?.avatarId || !user?.name?.trim();
+  const isGettingStartedRoute = location.pathname === '/app/onboarding/getting-started';
+  const isOnboardingRoute = isAvatarOnboardingRoute || isGettingStartedRoute;
+  const needsProfileOnboarding = !user?.avatarId || !user?.firstName?.trim();
+  const hasSeenGettingStarted = user?.id ? hasCompletedGettingStarted(user.id) : null;
 
   if (loading) {
-    return isAvatarOnboardingRoute ? (
-      <div className="min-h-screen bg-[#f6efe4]" />
+    return isOnboardingRoute ? (
+      <div className="min-h-screen bg-[#f6efe4] dark:bg-background" />
     ) : (
       <AppLoadingShell />
     );
@@ -62,15 +63,26 @@ function ProtectedLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  if (needsOnboarding && !isAvatarOnboardingRoute) {
-    return <Navigate to="/app/onboarding/avatar" replace />;
+  if (needsProfileOnboarding && !isOnboardingRoute) {
+    return <Navigate to="/app/onboarding/getting-started" replace />;
   }
 
-  if (!needsOnboarding && isAvatarOnboardingRoute) {
+  if (!needsProfileOnboarding && isAvatarOnboardingRoute) {
+    if (hasSeenGettingStarted === false) {
+      return <Navigate to="/app/onboarding/getting-started" replace />;
+    }
     return <Navigate to="/app" replace />;
   }
 
-  if (isAvatarOnboardingRoute) {
+  if (!needsProfileOnboarding && hasSeenGettingStarted === false && !isGettingStartedRoute) {
+    return <Navigate to="/app/onboarding/getting-started" replace />;
+  }
+
+  if (!needsProfileOnboarding && hasSeenGettingStarted === true && isGettingStartedRoute) {
+    return <Navigate to="/app" replace />;
+  }
+
+  if (isOnboardingRoute) {
     return <Outlet />;
   }
 
@@ -86,9 +98,18 @@ function ProtectedLayout() {
   );
 }
 
+const devSkipOnboardingReset = import.meta.env.VITE_DEV_SKIP_ONBOARDING_RESET === 'true';
+
 export function App() {
+  useEffect(() => {
+    if (import.meta.env.DEV && !devSkipOnboardingReset) {
+      resetGettingStartedForDev();
+    }
+  }, []);
+
   return (
     <AuthProvider>
+      <Toaster richColors closeButton />
       <Routes>
         <Route path="/" element={<HomeRoute />} />
         <Route path="/login" element={<LoginRoute />} />
@@ -97,12 +118,13 @@ export function App() {
         <Route path="/reset-password" element={<ResetPasswordRoute />} />
         <Route element={<ProtectedLayout />}>
           <Route path="/app/onboarding/avatar" element={<AvatarOnboardingRoute />} />
+          <Route path="/app/onboarding/getting-started" element={<GettingStartedRoute />} />
           <Route path="/app" element={<DashboardRoute />} />
+          <Route path="/app/rolodex" element={<RolodexIndexRoute />} />
           <Route path="/app/scouts" element={<ScoutsRoute />} />
           <Route path="/app/:id" element={<PersonRoute />} />
           <Route path="/app/settings" element={<SettingsRoute />} />
           <Route path="/app/profile" element={<SettingsRoute />} />
-          <Route path="/app/integrations" element={<SettingsRoute />} />
         </Route>
       </Routes>
     </AuthProvider>

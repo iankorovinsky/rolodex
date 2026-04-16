@@ -1,4 +1,3 @@
-// Export all tasks for Trigger.dev
-export * from './example';
-export * from './scouts/task';
-export * from './scouts/schedule';
+export * from './schedules';
+export * from './temporal';
+export * from './workflows/scouts';

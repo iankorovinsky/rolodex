@@ -1,12 +1,4 @@
-import {
-  BookUser,
-  LogOut,
-  Plug,
-  Plus,
-  Settings,
-  Telescope,
-  UserRound,
-} from 'lucide-react';
+import { BookUser, LogOut, Plug, Plus, Settings, Telescope, UserRound } from 'lucide-react';
 import type { CommandAction } from '@/commands/types';
 
 interface CoreActionOptions {
@@ -29,7 +21,7 @@ export function createCoreActions(options: CoreActionOptions): CommandAction[] {
       icon: BookUser,
       kind: 'action',
       priority: 0,
-      perform: () => navigate('/app'),
+      perform: () => navigate('/app/rolodex'),
     },
     {
       id: 'nav:scouts',
@@ -95,7 +87,7 @@ export function createCoreActions(options: CoreActionOptions): CommandAction[] {
       icon: Plug,
       kind: 'action',
       priority: 4,
-      perform: () => navigate('/app/integrations'),
+      perform: () => navigate('/app/settings'),
     },
     {
       id: 'account:signout',

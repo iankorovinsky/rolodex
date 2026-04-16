@@ -21,7 +21,7 @@ export function PersonCard({ person }: PersonCardProps) {
   return (
     <Link
       to={`/app/${person.id}`}
-      className="block p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+      className="block rounded-[var(--rdx-radius-card)] border border-border bg-card p-4 shadow-rdx-card transition-colors hover:bg-accent/50"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
@@ -44,9 +44,7 @@ export function PersonCard({ person }: PersonCardProps) {
           )}
 
           {latestMessage ? (
-            <p className="mt-2 text-sm text-muted-foreground line-clamp-1">
-              {latestMessage.body}
-            </p>
+            <p className="mt-2 text-sm text-muted-foreground line-clamp-1">{latestMessage.body}</p>
           ) : null}
 
           {person.tags && person.tags.length > 0 && (

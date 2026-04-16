@@ -109,7 +109,9 @@ export function IntegrationCard({
                             Last refresh {new Date(connection.lastRefreshAt).toLocaleString()}
                           </span>
                         ) : null}
-                        {connection.lastRefreshError ? <span>{connection.lastRefreshError}</span> : null}
+                        {connection.lastRefreshError ? (
+                          <span>{connection.lastRefreshError}</span>
+                        ) : null}
                       </div>
                     </div>
                     {onDisconnect ? (

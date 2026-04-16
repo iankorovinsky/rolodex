@@ -3,9 +3,7 @@ import { beforeEach, describe, expect, it, mock } from 'bun:test';
 const scoutCreate = mock();
 const scoutFindFirst = mock();
 
-const scheduleCreate = mock();
-const scheduleActivate = mock();
-const taskTrigger = mock();
+const runScoutTemporalNow = mock();
 
 mock.module('@rolodex/db', () => ({
   ScoutStatus: {
@@ -20,26 +18,18 @@ mock.module('@rolodex/db', () => ({
   },
 }));
 
-mock.module('@trigger.dev/sdk/v3', () => ({
-  configure: mock(),
-  schedules: {
-    create: scheduleCreate,
-    activate: scheduleActivate,
-    deactivate: mock(),
-    del: mock(),
-    update: mock(),
-  },
+mock.module('../src/services/temporal', () => ({
+  deleteScoutTemporalSchedule: mock(),
+  pauseScoutTemporalSchedule: mock(),
+  resumeScoutTemporalSchedule: mock(),
+  runScoutTemporalNow,
+  syncScoutTemporalSchedule: mock(async (scout: { scheduleId: string | null; id: string }) => {
+    return scout.scheduleId ?? `scout:${scout.id}`;
+  }),
 }));
 
 mock.module('../src/services/scoutTasks', () => ({
-  buildScoutCron: () => '0 9 * * *',
   getNextScoutRunAt: () => new Date('2026-04-03T13:00:00.000Z'),
-  executeScheduledScoutTask: {
-    id: 'scout-execute-scheduled',
-  },
-  executeScoutTask: {
-    trigger: taskTrigger,
-  },
 }));
 
 import { createScout, runScoutNow } from '../src/services/scouts';
@@ -48,11 +38,7 @@ describe('scout services', () => {
   beforeEach(() => {
     scoutCreate.mockReset();
     scoutFindFirst.mockReset();
-    scheduleCreate.mockReset();
-    scheduleActivate.mockReset();
-    taskTrigger.mockReset();
-    process.env.TRIGGER_SECRET_KEY = 'tr_dev_test';
-    process.env.TRIGGER_API_URL = 'https://api.trigger.dev';
+    runScoutTemporalNow.mockReset();
   });
 
   it('validates recipient emails on create', async () => {
@@ -85,7 +71,7 @@ describe('scout services', () => {
       relevanceWindow: 'DAY',
       recipientEmails: ['ops@example.com'],
       status: 'PAUSED',
-      triggerScheduleId: 'schedule-1',
+      scheduleId: 'schedule-1',
       nextRunAt: null,
       lastRunAt: null,
       lastSuccessAt: null,
@@ -95,14 +81,11 @@ describe('scout services', () => {
       updatedAt: new Date('2026-04-02T12:00:00.000Z'),
       deletedAt: null,
     });
-    taskTrigger.mockResolvedValue(undefined);
+    runScoutTemporalNow.mockResolvedValue(undefined);
 
     const result = await runScoutNow('user-1', 'scout-1');
 
     expect(result).toEqual({ queued: true });
-    expect(taskTrigger).toHaveBeenCalledWith({
-      scoutId: 'scout-1',
-      trigger: 'manual',
-    });
+    expect(runScoutTemporalNow).toHaveBeenCalledWith('scout-1');
   });
 });

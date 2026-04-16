@@ -18,11 +18,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Install dependencies
 bun install
 
-# Development (starts desktop + api in Turbo's built-in TUI)
+# Development (starts local Temporal + desktop + api)
 bun run dev
 
 # Custom dev dashboard (Blessed UI in tools/scripts/dev-tui.js)
 bun run dev:custom
+
+# Temporal dev server only
+bun run temporal:dev
+
+# Temporal worker only
+bun run temporal:worker
 
 # Build all packages
 bun run build
@@ -56,17 +62,13 @@ bun run db:studio      # Open Prisma Studio
 - Never use `prisma db push` as a substitute for migrations.
 - If `bun run db:migrate` fails, stop and report the error. Do not hand-write `migration.sql` or manually patch migration files to work around it.
 
-### Trigger.dev (Background Jobs)
+### Temporal (Local Development)
 
 ```bash
-bunx trigger.dev login # First-time CLI login (opens browser)
-bun run trigger:dev    # Start local dev server for tasks
-bun run trigger:deploy # Deploy tasks to Trigger.dev cloud
+bun run temporal:dev
 ```
 
-Tasks are defined in `packages/jobs/src/`. Config is in `trigger.config.ts`.
-
-Auto-deploys on push to `staging` via GitHub Actions (requires `TRIGGER_ACCESS_TOKEN` secret).
+The local dev server is pinned to gRPC port `7233` and Web UI port `8233`, with SQLite state stored at `infra/temporal/dev.db`.
 
 ### Running Single App/Package
 
@@ -85,7 +87,7 @@ This is a Bun/Turbo monorepo with the following structure:
 - **apps/api**: Express 5 backend API
 - **packages/db**: Prisma 6 schema, client, and migrations (PostgreSQL)
 - **packages/types**: Shared TypeScript types (`@rolodex/types`)
-- **packages/jobs**: Trigger.dev background tasks (`@rolodex/jobs`)
+- **packages/jobs**: Temporal workflows/worker code (`@rolodex/jobs`)
 
 ### Package Dependencies
 
@@ -127,10 +129,6 @@ Create `.env` at repo root. Required variables:
 - `API_URL` - Backend base URL shared by the Electron renderer and the macOS runner CLI
 - `ROLODEX_DEVICE_TOKEN` - Optional default device token for the macOS runner CLI
 - `ROLODEX_MESSAGES_DB_PATH` - Optional override for the Messages `chat.db` path
-- `TRIGGER_ACCESS_TOKEN` - Trigger.dev secret key (for triggering tasks from app code)
+- `TEMPORAL_ADDRESS` - Optional Temporal server address override for local development
 
 Use `.env.example` as the source of truth for the current variable set.
-
-### GitHub Secrets (for CI/CD)
-
-- `TRIGGER_ACCESS_TOKEN` - Trigger.dev Personal Access Token (for deploys)

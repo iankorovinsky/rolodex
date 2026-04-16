@@ -102,7 +102,6 @@ export function PersonForm({
     <form onSubmit={handleSubmit} className="flex min-h-full flex-col bg-background">
       <div className="space-y-6 px-6 py-6">
         <section className="space-y-4">
-
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="first-name" className="inline-flex items-baseline gap-1">
@@ -134,7 +133,7 @@ export function PersonForm({
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Co-Director @ Hack the North, Student @ University of Waterloo"
+              placeholder="VP Sales @ Acme Corp · met at SaaStr"
               rows={3}
             />
           </div>
@@ -154,7 +153,6 @@ export function PersonForm({
         </section>
 
         <section className="space-y-4">
-
           <div className="space-y-2">
             <Label htmlFor="emails">Emails</Label>
             <Textarea

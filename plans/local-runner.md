@@ -1,9 +1,11 @@
 # Secure iMessage Sync Runner v1
 
 ## Summary
+
 Build a new monorepo package, `packages/imessage-sync`, as a macOS-only local CLI that reads macOS Contacts and Apple Messages `chat.db`, then syncs that data into Rolodex through dedicated API endpoints.
 
 The final v1 shape is:
+
 - keep `Person` as the main entity
 - add `PersonPhone` for multiple phone numbers
 - keep `PersonEmail`, but store canonical normalized email directly in the existing field
@@ -17,9 +19,11 @@ All phone/email matching is exact only. No name matching. No external identity t
 ## Key Changes
 
 ### Data model
+
 Update Prisma schema to support multi-phone people, latest-message sync, and secure incremental ingestion.
 
 Schema changes:
+
 - Make `Person.firstName` nullable.
   This allows creation of phone-only or email-only people from sync without fake placeholder names.
 - Add `PersonPhone`:
@@ -40,6 +44,7 @@ Schema changes:
   - `id`, `userId`, `name`, `tokenHash`, `lastUsedAt`, `revokedAt`, `createdAt`
 
 Shared type changes:
+
 - Extend `Person` in [packages/types/src/rolodex.ts](/Users/iankorovinsky/Projects/rolodex/packages/types/src/rolodex.ts) to include:
   - `phones: PersonPhone[]`
   - `messageEvent: MessageEvent | null`
@@ -47,6 +52,7 @@ Shared type changes:
 - Keep manual UI validation stricter than sync if desired, but server-side sync ingestion must allow missing names
 
 Normalization rules:
+
 - Normalize before every write and comparison
 - Persist only canonical values
 - Do not store separate normalized columns
@@ -54,9 +60,11 @@ Normalization rules:
 - Email normalization should be one shared utility used everywhere
 
 ### Matching and sync behavior
+
 Use deterministic exact matching only.
 
 Contact sync:
+
 - Runner reads macOS Contacts first
 - For each contact, normalize all phones and emails before sending
 - API matches in this order:
@@ -74,6 +82,7 @@ Contact sync:
   - create `PersonEmail` rows
 
 Message sync:
+
 - Runner performs message sync only after successful contacts sync
 - Runner reads new rows from `chat.db`
 - For each new handle:
@@ -90,43 +99,52 @@ Message sync:
   - create `MessageEvent`
 
 Latest message semantics:
+
 - `MessageEvent` is one-row-per-person in v1
 - Newer synced messages replace older message summary values for that person
 - UI derives “last contacted” and preview text from `messageEvent`, not from duplicated fields on `Person`
 
 Idempotency:
+
 - Sync endpoints must be idempotent
 - Repeating the same contact batch must not duplicate phones/emails
 - Repeating the same message batch must not create duplicate `MessageEvent` rows
 
 ### Cursor strategy
+
 Use row-id cursor for messages and pragmatic incremental handling for contacts.
 
 Message cursor:
+
 - Use SQLite message row id as the cursor
 - Store the highest committed row id in `UserSyncCursor.cursor` for `imessage_messages`
 - Advance only after successful DB transaction
 
 Contact cursor:
+
 - Prefer contact modification timestamp if the local bridge exposes it
 - If not available reliably, rescan all contacts every run
 - Rely on exact merge logic and idempotent writes rather than a fragile contact cursor
 - Still keep a `UserSyncCursor` row for `imessage_contacts` so status UI has a consistent model
 
 Server-side cursor ownership:
+
 - `UserSyncCursor` is the source of truth
 - Runner may keep local cached state for operational convenience, but must fetch server status before syncing and treat server cursor as authoritative
 
 ### API and security
+
 Harden authentication as part of this work.
 
 Normal app auth:
+
 - Replace `x-user-id` trust in the API with verified bearer auth from Supabase
 - Web app sends the user’s access token
 - API verifies token server-side and derives authenticated `userId`
 - Existing rolodex routes should move to this verified auth path
 
 Runner auth:
+
 - Runner uses a device token, not a user id
 - Add endpoints:
   - `POST /api/integrations/device-tokens`
@@ -144,12 +162,14 @@ Runner auth:
   - revoked tokens immediately stop working
 
 Delete-token security:
+
 - `DELETE /api/integrations/device-tokens/:id` must require normal authenticated user bearer auth
 - Server must load the token by `id` and confirm ownership against the authenticated user
 - If the token is not owned by the caller, return 404 or 403
 - Do not allow device-token auth to revoke tokens
 
 Security controls:
+
 - never accept `userId` from request bodies or headers on sync endpoints
 - ignore or reject caller-supplied user identifiers
 - TLS only
@@ -164,9 +184,11 @@ Security controls:
   - sync routes use verified device-token auth only
 
 ### Runner package
+
 Create `packages/imessage-sync` as a CLI package in the monorepo.
 
 Responsibilities:
+
 - provide a single command such as `rolodex-imessage-sync run`
 - read:
   - macOS Contacts
@@ -180,6 +202,7 @@ Responsibilities:
 - handle locked DB and transient network failures without advancing cursor
 
 Runner payloads:
+
 - contacts batch:
   - names
   - normalized phone numbers
@@ -193,20 +216,24 @@ Runner payloads:
   - highest local SQLite row id included in batch
 
 Packaging:
+
 - keep the package in this repo
 - add a root script alias for development and local ops
 - first delivery is a scheduled CLI, not a desktop shell
 - LaunchAgent setup can follow after the CLI is stable
 
 ## Frontend Adjustments
+
 The frontend needs explicit support for the new auth model, new person shape, and sync management UX.
 
 Auth and API client:
+
 - Update [apps/desktop/lib/rolodex/api.ts](/Users/iankorovinsky/Projects/rolodex/apps/desktop/lib/rolodex/api.ts) and related API helpers to send bearer auth from Supabase instead of `x-user-id`
 - Add a shared authenticated fetch path for all API requests
 - Remove assumptions that the API will trust client-supplied user ids
 
 Rolodex person UX:
+
 - Update person forms and detail views to support multiple phone numbers instead of a single `phoneNumber`
 - Adjust create/edit payloads to send `phoneNumbers`
 - Show latest message preview and timestamp from `messageEvent` on person detail and optionally person list rows
@@ -215,6 +242,7 @@ Rolodex person UX:
 - Update search behavior if needed so phone and email lookup still work against the new child relations
 
 Settings / integrations UX:
+
 - Add an “iMessage Sync” section in app settings or integrations UI
 - Support:
   - create device token
@@ -231,11 +259,13 @@ Settings / integrations UX:
   - grant Full Disk Access
 
 Frontend typing:
+
 - Update all shared `Person` consumers to use `phones` and `messageEvent`
 - Remove reliance on `person.phoneNumber` in list/detail/forms
 - Ensure nullable `firstName` does not break rendering or form defaults
 
 ## Test Plan
+
 - Migration tests:
   - `Person.firstName` nullable migration succeeds
   - `PersonPhone`, `MessageEvent`, `UserSyncCursor`, and `UserDeviceToken` migrate cleanly
@@ -263,6 +293,7 @@ Frontend typing:
   - sync status is visible in frontend
 
 ## Assumptions and Defaults
+
 - v1 is macOS-only
 - contacts always sync before messages
 - no name matching

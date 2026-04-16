@@ -1,6 +1,8 @@
 import type { Person } from '@rolodex/types';
 
-export const getPersonDisplayName = (person: Pick<Person, 'firstName' | 'lastName' | 'phones' | 'emails'>) =>
+export const getPersonDisplayName = (
+  person: Pick<Person, 'firstName' | 'lastName' | 'phones' | 'emails'>
+) =>
   [person.firstName, person.lastName].filter(Boolean).join(' ') ||
   person.phones[0]?.phoneNumber ||
   person.emails[0]?.email ||

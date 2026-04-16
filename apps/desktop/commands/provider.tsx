@@ -53,7 +53,8 @@ function scoreAction(command: CommandAction, normalizedQuery: string) {
 
   if (title === normalizedQuery) return -400 + command.priority;
   if (title.startsWith(normalizedQuery)) return -300 + command.priority;
-  if (keywords.some((keyword) => keyword.startsWith(normalizedQuery))) return -220 + command.priority;
+  if (keywords.some((keyword) => keyword.startsWith(normalizedQuery)))
+    return -220 + command.priority;
   if (title.includes(normalizedQuery)) return -180 + command.priority;
   if (subtitle.includes(normalizedQuery)) return -120 + command.priority;
   if (keywords.some((keyword) => keyword.includes(normalizedQuery))) return -80 + command.priority;
@@ -61,10 +62,7 @@ function scoreAction(command: CommandAction, normalizedQuery: string) {
   return Number.POSITIVE_INFINITY;
 }
 
-function getBestPeopleCache(
-  cache: Map<string, CommandEntityResult[]>,
-  query: string
-) {
+function getBestPeopleCache(cache: Map<string, CommandEntityResult[]>, query: string) {
   if (!query) {
     return cache.get('') || [];
   }
@@ -121,7 +119,9 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [isAddPersonOpen, setIsAddPersonOpen] = useState(false);
-  const [peopleCache, setPeopleCache] = useState<Map<string, CommandEntityResult[]>>(() => new Map());
+  const [peopleCache, setPeopleCache] = useState<Map<string, CommandEntityResult[]>>(
+    () => new Map()
+  );
   const [recentEntityIds, setRecentEntityIds] = useState<string[]>([]);
   const [isPeopleLoading, setIsPeopleLoading] = useState(false);
   const [registrations, setRegistrations] = useState<Map<number, CommandAction[]>>(() => new Map());
@@ -164,7 +164,9 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const rememberEntity = useCallback((entityId: string) => {
-    setRecentEntityIds((current) => [entityId, ...current.filter((id) => id !== entityId)].slice(0, 8));
+    setRecentEntityIds((current) =>
+      [entityId, ...current.filter((id) => id !== entityId)].slice(0, 8)
+    );
   }, []);
 
   const loadPeople = useCallback(

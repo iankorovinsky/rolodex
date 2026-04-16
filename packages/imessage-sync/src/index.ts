@@ -77,13 +77,13 @@ const fetchJson = async <T>(url: string, deviceToken: string, init?: RequestInit
 const loadContacts = async (): Promise<SyncContactPayload[]> => {
   try {
     log('Loading contacts from macOS Contacts');
-    const { stdout } = await execFileAsync('osascript', [
-      '-l',
-      'JavaScript',
-      new URL('./contacts.jxa', import.meta.url).pathname,
-    ], {
-      maxBuffer: CHILD_PROCESS_MAX_BUFFER,
-    });
+    const { stdout } = await execFileAsync(
+      'osascript',
+      ['-l', 'JavaScript', new URL('./contacts.jxa', import.meta.url).pathname],
+      {
+        maxBuffer: CHILD_PROCESS_MAX_BUFFER,
+      }
+    );
     const parsed = JSON.parse(stdout.trim());
     if (parsed.error) {
       throw new Error(parsed.error);
@@ -100,7 +100,9 @@ const loadContacts = async (): Promise<SyncContactPayload[]> => {
     log('Loaded contacts', { count: contacts.length });
     return contacts;
   } catch (error) {
-    throw new Error(`Contacts access failed. Grant Contacts permission and retry. ${String(error)}`);
+    throw new Error(
+      `Contacts access failed. Grant Contacts permission and retry. ${String(error)}`
+    );
   }
 };
 
@@ -174,7 +176,9 @@ const loadMessages = async (chatDbPath: string, cursor: number): Promise<SyncMes
       });
     }
 
-    const messages = Array.from(latestByHandle.values()).sort((left, right) => left.cursor - right.cursor);
+    const messages = Array.from(latestByHandle.values()).sort(
+      (left, right) => left.cursor - right.cursor
+    );
     log('Loaded message summaries', { rawRows: rows.length, uniqueHandles: messages.length });
     return messages;
   } catch (error) {
@@ -260,7 +264,10 @@ const run = async () => {
   const currentCursor = Number(status.messages?.cursor || 0);
   const messages = await loadMessages(options.chatDbPath, currentCursor);
   if (messages.length > 0) {
-    log('Preparing message summaries upload', { count: messages.length, cursorStart: currentCursor });
+    log('Preparing message summaries upload', {
+      count: messages.length,
+      cursorStart: currentCursor,
+    });
     await uploadInChunks({
       items: messages,
       endpoint: `${options.apiUrl}/api/integrations/imessage/sync/messages`,
