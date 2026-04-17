@@ -4,12 +4,17 @@ let connectionPromise: Promise<Connection> | null = null;
 let clientPromise: Promise<Client> | null = null;
 let scheduleClientPromise: Promise<ScheduleClient> | null = null;
 
+function normalizeTemporalAddress(value: string): string {
+  return value.replace(/^https?:\/\//, '').replace(/\/$/, '');
+}
+
 export function getTemporalAddress() {
-  return process.env.TEMPORAL_ADDRESS || 'localhost:7233';
+  const raw = process.env.TEMPORAL_SERVER_URL || 'localhost:7233';
+  return normalizeTemporalAddress(raw);
 }
 
 export function getTemporalNamespace() {
-  return process.env.TEMPORAL_NAMESPACE || 'default';
+  return process.env.TEMPORAL_NAMESPACE || 'rolodex';
 }
 
 async function createConnection() {

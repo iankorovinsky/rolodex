@@ -13,12 +13,14 @@ async function run() {
   await reconcileScoutSchedules();
 
   const connection = await NativeConnection.connect({
-    address: process.env.TEMPORAL_ADDRESS || 'localhost:7233',
+    address: (process.env.TEMPORAL_SERVER_URL || 'localhost:7233')
+      .replace(/^https?:\/\//, '')
+      .replace(/\/$/, ''),
   });
 
   const worker = await Worker.create({
     connection,
-    namespace: process.env.TEMPORAL_NAMESPACE || 'default',
+    namespace: process.env.TEMPORAL_NAMESPACE || 'rolodex',
     taskQueue: SCOUTS_TASK_QUEUE,
     workflowsPath: path.resolve(__dirname, './workflows/index.ts'),
     activities,

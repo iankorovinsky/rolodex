@@ -141,8 +141,6 @@ Create `.env` at repo root. Required variables:
 - `VITE_SUPABASE_URL` — Supabase project URL exposed to the Electron renderer
 - `VITE_SUPABASE_PUBLISHABLE_KEY` — Supabase publishable key exposed to the Electron renderer
 - `API_URL` — Backend base URL shared by the Electron renderer and the macOS runner CLI
-- `ROLODEX_DEVICE_TOKEN` — Optional default device token for the macOS runner CLI
-- `ROLODEX_MESSAGES_DB_PATH` — Optional override for the Messages `chat.db` path
-- `TEMPORAL_ADDRESS` / `TEMPORAL_NAMESPACE` — Optional Temporal overrides for local development
+- `TEMPORAL_SERVER_URL` / `TEMPORAL_NAMESPACE` — Optional Temporal overrides for local development
 
 Use `.env.example` as the source of truth for the current variable set.

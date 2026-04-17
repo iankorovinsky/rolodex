@@ -67,9 +67,8 @@
 - Renderer-facing Supabase vars use the `VITE_` prefix.
 - `API_URL` is shared by the Electron renderer and the macOS runner CLI.
 - Server-side Supabase verification uses plain `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`.
-- Runner CLI defaults use `ROLODEX_DEVICE_TOKEN` and `ROLODEX_MESSAGES_DB_PATH`.
 - Use `.env.example` as the template for new environments.
-- Local Temporal development uses `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`, and optional `TEMPORAL_UI_URL` when overrides are needed.
+- Local Temporal development uses `TEMPORAL_SERVER_URL`, `TEMPORAL_NAMESPACE`, and optional `TEMPORAL_UI_URL` when overrides are needed.
 
 ## Database Migration Policy
 

@@ -36,8 +36,8 @@ const child = spawn(
     stdio: 'inherit',
     env: {
       ...process.env,
-      TEMPORAL_ADDRESS: `localhost:${grpcPort}`,
-      TEMPORAL_UI_ADDRESS: `http://localhost:${uiPort}`,
+      TEMPORAL_SERVER_URL: `localhost:${grpcPort}`,
+      TEMPORAL_UI_URL: `http://localhost:${uiPort}`,
     },
   }
 );

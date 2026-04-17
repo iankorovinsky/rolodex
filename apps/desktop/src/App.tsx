@@ -19,6 +19,9 @@ import { ScoutsRoute } from './routes/scouts-route';
 import { RolodexIndexRoute } from './routes/rolodex-index-route';
 import { GettingStartedRoute } from './routes/getting-started-route';
 
+const devSkipOnboarding =
+  import.meta.env.DEV && import.meta.env.VITE_DEV_SKIP_ONBOARDING === 'true';
+
 function AppLoadingShell() {
   return (
     <SidebarProvider>
@@ -48,8 +51,14 @@ function ProtectedLayout() {
   const isAvatarOnboardingRoute = location.pathname === '/app/onboarding/avatar';
   const isGettingStartedRoute = location.pathname === '/app/onboarding/getting-started';
   const isOnboardingRoute = isAvatarOnboardingRoute || isGettingStartedRoute;
-  const needsProfileOnboarding = !user?.avatarId || !user?.firstName?.trim();
-  const hasSeenGettingStarted = user?.id ? hasCompletedGettingStarted(user.id) : null;
+  const needsProfileOnboarding = devSkipOnboarding
+    ? false
+    : !user?.avatarId || !user?.firstName?.trim();
+  const hasSeenGettingStarted = devSkipOnboarding
+    ? true
+    : user?.id
+      ? hasCompletedGettingStarted(user.id)
+      : null;
 
   if (loading) {
     return isOnboardingRoute ? (
@@ -98,11 +107,9 @@ function ProtectedLayout() {
   );
 }
 
-const devSkipOnboardingReset = import.meta.env.VITE_DEV_SKIP_ONBOARDING_RESET === 'true';
-
 export function App() {
   useEffect(() => {
-    if (import.meta.env.DEV && !devSkipOnboardingReset) {
+    if (import.meta.env.DEV && !devSkipOnboarding) {
       resetGettingStartedForDev();
     }
   }, []);

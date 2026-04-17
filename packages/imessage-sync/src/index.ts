@@ -41,9 +41,8 @@ const parseArgs = (): CliOptions => {
   };
 
   const apiUrl = readOption('--api-url') || process.env.API_URL;
-  const deviceToken = readOption('--device-token') || process.env.ROLODEX_DEVICE_TOKEN;
-  const chatDbPath =
-    readOption('--chat-db-path') || process.env.ROLODEX_MESSAGES_DB_PATH || DEFAULT_CHAT_DB_PATH;
+  const deviceToken = readOption('--device-token');
+  const chatDbPath = readOption('--chat-db-path') || DEFAULT_CHAT_DB_PATH;
 
   if (!apiUrl || !deviceToken) {
     throw new Error('Usage: bun run src/index.ts --api-url <url> --device-token <token>');

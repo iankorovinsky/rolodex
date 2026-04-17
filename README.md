@@ -155,8 +155,7 @@ Bun loads the root `.env` for workspace commands. Common names:
 - `DATABASE_URL`, `DIRECT_URL` — Postgres / Prisma
 - `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` — API token verification
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `API_URL` — Electron renderer + API base URL
-- `ROLODEX_DEVICE_TOKEN`, `ROLODEX_MESSAGES_DB_PATH` — optional runner CLI defaults
-- `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`, `TEMPORAL_UI_URL` — Temporal overrides
+- `TEMPORAL_SERVER_URL`, `TEMPORAL_NAMESPACE`, `TEMPORAL_UI_URL` — Temporal overrides
 
 Plain `SUPABASE_*` is for server-side code; `VITE_*` is for code bundled into the renderer.
 
