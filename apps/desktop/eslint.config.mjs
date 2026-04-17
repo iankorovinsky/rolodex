@@ -2,7 +2,7 @@
 import storybook from 'eslint-plugin-storybook';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
-import { createDesktopEslintConfig } from '@rolodex/eslint-config';
+import { createDesktopEslintConfig } from '../../eslint.shared.mjs';
 
 export default createDesktopEslintConfig({
   reactRefresh,

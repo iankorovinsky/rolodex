@@ -5,151 +5,166 @@
 ```
 rolodex/
 ├── apps/
-│   ├── desktop/      # Electron desktop app
-│   └── api/          # Backend API (Bun)
-│
+│   ├── desktop/       # Electron + Vite + React
+│   └── api/           # Bun + Express API
 ├── packages/
-│   ├── db/             # Prisma schema & database client
-│   ├── eslint-config/  # Shared ESLint flat config (API + desktop)
-│   └── types/          # Shared TypeScript types
-│
+│   ├── db/            # Prisma schema, migrations, client
+│   ├── types/         # Shared TypeScript (`@rolodex/types`)
+│   ├── jobs/          # Temporal worker + workflows (`@rolodex/jobs`)
+│   └── imessage-sync/ # macOS Messages sync CLI (`@rolodex/imessage-sync`)
+├── infra/
+│   └── temporal/      # Local Temporal SQLite dev state
 ├── tools/
-│   └── scripts/      # Repo scripts
-│
-├── package.json       # Root workspace config
-├── turbo.json         # Turborepo pipeline config
-└── tsconfig.base.json # Base TypeScript config
+│   └── scripts/       # Dev TUI, Temporal launcher, Electron install, etc.
+├── eslint.shared.mjs  # Shared ESLint flat config (imported by apps)
+├── package.json       # Workspace root (Turbo, Prettier, dev TUI deps)
+├── turbo.json         # Turbo task pipeline
+└── tsconfig.base.json # Shared TS baseline
 ```
+
+Product and UI notes also live in **`DESIGN.md`** at the repo root.
 
 ## Setup
 
 ```bash
-# Copy env template and fill it in
 cp .env.example .env
-
-# Install all dependencies
 bun install
+```
 
-# If Electron's binary download was skipped, repair it manually
-bun run electron:install
+If Electron’s postinstall download failed:
 
-# Generate Prisma client (must run after schema changes)
-bun run db:generate
+```bash
+node ./tools/scripts/install-electron.mjs
+```
 
-# Run migrations
-bun run db:migrate
+Prisma client (after clone or schema change):
+
+```bash
+bun run --filter @rolodex/db generate
+```
+
+Migrations (dev):
+
+```bash
+bun run --filter @rolodex/db migrate:dev
 ```
 
 ## Commands
 
-### Root Commands
+### Root (`package.json`)
+
+These are the scripts defined on the **workspace root** today:
 
 ```bash
-# Development
-bun run dev                   # Start local Temporal + desktop + api
-bun run dev:parallel          # Same as dev
-bun run dev:custom            # Start the custom Blessed dashboard with Temporal, worker, desktop, api, and db
-bun run temporal:dev          # Start only the local Temporal dev server
-bun run temporal:worker       # Start only the local Temporal worker
-bun run electron:install      # Reinstall the local Electron binary if desktop dev fails
+bun run dev              # Blessed dev TUI — desktop, API, Temporal, worker, Storybook, DB helpers
+bun run build            # turbo run build
+bun run typecheck        # turbo run typecheck
+bun run lint             # turbo run lint
+bun run test             # turbo run test
+bun run ci               # typecheck → lint → format:check → build → test
+bun run format           # Prettier write (includes .mjs)
+bun run fmt              # alias → format
+bun run format:check     # Prettier check only
+```
 
-# Build & Test
-bun run build                 # Build all packages
-bun run typecheck             # Typecheck all packages
-bun run lint                  # Lint all packages
-bun run test                  # Run tests in all packages
-bun run format                # Format all files with prettier
-bun run fmt                   # Alias for format
-bun run format:check          # Check formatting without modifying files
+**Also in the repo (no root npm script):**
 
-# Database
-bun run db:generate           # Generate Prisma client
-bun run db:migrate            # Run database migrations (dev)
-bun run db:studio             # Open Prisma Studio
-bun run db:format             # Format Prisma schema
+```bash
+node ./tools/scripts/start-temporal-dev.mjs   # Temporal dev server only
+node ./tools/scripts/dev-with-temporal.mjs      # Temporal + worker + desktop + API (Turbo)
+node ./tools/scripts/install-electron.mjs      # Fix Electron binary if needed
+```
+
+### Database (`@rolodex/db`)
+
+```bash
+bun run --filter @rolodex/db generate
+bun run --filter @rolodex/db migrate:dev
+bun run --filter @rolodex/db migrate:deploy
+bun run --filter @rolodex/db studio
+bun run --filter @rolodex/db format
+```
+
+`turbo run generate --filter=@rolodex/db` works for Prisma generate via Turbo.
+
+### API (`@rolodex/api`)
+
+```bash
+bun run --filter @rolodex/api dev
+bun run --filter @rolodex/api build
+bun run --filter @rolodex/api start
+bun run --filter @rolodex/api typecheck
+bun run --filter @rolodex/api lint
+bun run --filter @rolodex/api test
+bun run --filter @rolodex/api test:watch
+```
+
+### Desktop (`@rolodex/desktop`)
+
+```bash
+bun run --filter @rolodex/desktop dev
+bun run --filter @rolodex/desktop build
+bun run --filter @rolodex/desktop start
+bun run --filter @rolodex/desktop typecheck
+bun run --filter @rolodex/desktop lint
+bun run --filter @rolodex/desktop storybook
+bun run --filter @rolodex/desktop build-storybook
+bun run --filter @rolodex/desktop dist:dir
+bun run --filter @rolodex/desktop dist:mac
+```
+
+### Jobs (`@rolodex/jobs`)
+
+```bash
+bun run --filter @rolodex/jobs dev        # Temporal worker (tsx watch)
+bun run --filter @rolodex/jobs typecheck
+bun run --filter @rolodex/jobs test
+```
+
+### imessage-sync (`@rolodex/imessage-sync`)
+
+```bash
+bun run --filter @rolodex/imessage-sync run
 ```
 
 ## CI Checks
 
-CI runs on pull requests to `staging`. To run the same checks locally, you can use:
+GitHub Actions workflows live under `.github/workflows/` (e.g. CI on pull requests to `staging`). Locally:
 
 ```bash
 bun run ci
 ```
 
-### API Commands (`apps/api`)
-
-```bash
-bun run --filter '@rolodex/api' dev          # Start API dev server
-bun run --filter '@rolodex/api' build        # Build API
-bun run --filter '@rolodex/api' start        # Start production server
-bun run --filter '@rolodex/api' typecheck    # Typecheck API code
-bun run --filter '@rolodex/api' lint         # Lint API code
-bun run --filter '@rolodex/api' test         # Run API tests
-bun run --filter '@rolodex/api' test:watch   # Run tests in watch mode
-```
-
-### Desktop Commands (`apps/desktop`)
-
-```bash
-bun run --filter '@rolodex/desktop' dev          # Start Electron + Vite dev loop
-bun run --filter '@rolodex/desktop' build        # Build renderer and Electron main
-bun run --filter '@rolodex/desktop' start        # Launch built Electron app
-bun run --filter '@rolodex/desktop' typecheck    # Typecheck desktop code
-bun run --filter '@rolodex/desktop' lint         # Lint desktop code
-```
-
-### Database Commands (`packages/db`)
-
-```bash
-bun run --filter '@rolodex/db' generate      # Generate Prisma client
-bun run --filter '@rolodex/db' migrate:dev    # Run migrations (dev)
-bun run --filter '@rolodex/db' migrate:deploy # Deploy migrations (prod)
-bun run --filter '@rolodex/db' studio         # Open Prisma Studio
-bun run --filter '@rolodex/db' format         # Format Prisma schema
-```
-
 ## Workspace Packages
 
-### Apps
-
-- `@rolodex/desktop` - Electron desktop application
-- `@rolodex/api` - Backend API server (Bun runtime)
-
-### Packages
-
-- `@rolodex/db` - Prisma schema and database client
-- `@rolodex/types` - Shared TypeScript types
+| Name                     | Role                        |
+| ------------------------ | --------------------------- |
+| `@rolodex/desktop`       | Electron desktop app        |
+| `@rolodex/api`           | HTTP API on Bun             |
+| `@rolodex/db`            | Prisma + Postgres           |
+| `@rolodex/types`         | Shared TS types             |
+| `@rolodex/jobs`          | Temporal worker + workflows |
+| `@rolodex/imessage-sync` | Messages DB sync CLI        |
 
 ## Environment Variables
 
-Copy [.env.example](/Users/iankorovinsky/Projects/rolodex/.env.example) to `.env` at the repo root and fill in the values.
+Copy [`.env.example`](.env.example) to `.env` at the repo root.
 
-Bun loads the root `.env` for the workspace. Use these names:
+Bun loads the root `.env` for workspace commands. Common names:
 
-- `DATABASE_URL` and `DIRECT_URL` for Prisma/Postgres
-- `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` for backend token verification
-- `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and `API_URL` for the Electron renderer
-- `ROLODEX_DEVICE_TOKEN` and `ROLODEX_MESSAGES_DB_PATH` only if you want default values for the macOS runner CLI
-- `TEMPORAL_ADDRESS` only if you need to override the default local Temporal address
+- `DATABASE_URL`, `DIRECT_URL` — Postgres / Prisma
+- `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` — API token verification
+- `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `API_URL` — Electron renderer + API base URL
+- `ROLODEX_DEVICE_TOKEN`, `ROLODEX_MESSAGES_DB_PATH` — optional runner CLI defaults
+- `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`, `TEMPORAL_UI_URL` — Temporal overrides
 
-The Supabase URL and publishable key appear twice on purpose:
+Plain `SUPABASE_*` is for server-side code; `VITE_*` is for code bundled into the renderer.
 
-- plain `SUPABASE_*` for server-side code
-- `VITE_*` for renderer-exposed Electron code
-
-`API_URL` is shared by both the Electron renderer and the macOS runner CLI.
-
-Local Temporal development uses:
-
-- gRPC server on `localhost:7233`
-- Web UI on `http://localhost:8233`
-- SQLite persistence at `infra/temporal/dev.db`
-- a local worker via `bun run temporal:worker`
+Local Temporal defaults: gRPC `localhost:7233`, Web UI `http://localhost:8233`, SQLite under `infra/temporal/dev.db`.
 
 ## Adding New Packages
 
-1. Create directory in `packages/` or `apps/`
-2. Add `package.json` with unique name (e.g., `@rolodex/ui`)
-3. Add to dependencies with `workspace:*` protocol
-4. Run `bun install`
+1. Create a directory under `packages/` or `apps/` with a `package.json`.
+2. Use a scoped name (e.g. `@rolodex/ui`).
+3. Reference it from other packages with `"@rolodex/ui": "workspace:*"`.
+4. Run `bun install`.

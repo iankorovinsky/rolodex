@@ -25,8 +25,8 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
   console.log(`Rolodex custom dev TUI
 
 Usage:
-  bun run dev:custom
-  bun run dev:custom --help
+  bun run dev
+  bun run dev -- --help
 
 Controls:
   Up / Down       Switch selected process

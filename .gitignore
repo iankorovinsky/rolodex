@@ -1,6 +1,7 @@
 # Base
 node_modules
 .bun
+**/.vite
 .env
 .env.local
 *.log

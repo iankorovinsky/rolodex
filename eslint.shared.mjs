@@ -111,7 +111,11 @@ export function createApiEslintConfig() {
 }
 
 /** Desktop: browser + TS/TSX + React hooks/refresh + Storybook + Prettier (last). */
-export function createDesktopEslintConfig({ reactRefresh, reactHooksRecommended, storybookFlatRecommended }) {
+export function createDesktopEslintConfig({
+  reactRefresh,
+  reactHooksRecommended,
+  storybookFlatRecommended,
+}) {
   return [
     { ignores: SHARED_IGNORES },
     js.configs.recommended,

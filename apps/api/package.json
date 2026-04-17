@@ -22,7 +22,6 @@
     "express": "^5.0.0"
   },
   "devDependencies": {
-    "@rolodex/eslint-config": "workspace:*",
     "@types/express": "^5.0.1",
     "@types/node": "^20",
     "eslint": "^9.22.0",

@@ -1,3 +1,3 @@
-import { createApiEslintConfig } from '@rolodex/eslint-config';
+import { createApiEslintConfig } from '../../eslint.shared.mjs';
 
 export default createApiEslintConfig();
