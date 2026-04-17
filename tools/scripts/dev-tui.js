@@ -31,16 +31,16 @@ Usage:
 Controls:
   Up / Down       Switch selected process
   1-6             Jump directly to desktop/storybook/api/temporal/worker/db
-  Mouse click     Switch process
+  Tab / Ctrl-I    Toggle log pane vs process list (also toggles terminal mouse capture)
+  Mouse click     Focus a pane (sidebar vs logs) or switch process
   Mouse wheel     Scroll logs
   Page Up/Down    Scroll logs faster
-  s               Toggle selection mode
-  Esc             Exit selection mode
+  Esc             Leave log pane (re-enable mouse capture, focus process list)
   q / Ctrl-C      Quit
 
 Notes:
-  Selection mode disables terminal mouse capture so text can be selected normally.
-  While selection mode is enabled, mouse clicks are handled by the terminal rather than the TUI.
+  Tab is the only control that toggles terminal mouse capture (so it always stays predictable).
+  If you turn capture off (Tab), the terminal will stop sending mouse events to this TUI.
 `);
   process.exit(0);
 }
@@ -107,6 +107,7 @@ const logPane = grid.set(0, 2, 11, 10, blessed.box, {
 
 let currentView = PROCESS_NAMES[0];
 let selectionMode = false;
+let focusedPane = 'sidebar'; // 'sidebar' | 'log'
 const logBuffers = Object.fromEntries(PROCESS_NAMES.map((name) => [name, []]));
 const scrollOffsets = Object.fromEntries(PROCESS_NAMES.map((name) => [name, 0]));
 
@@ -275,19 +276,57 @@ const switchView = (selected) => {
   renderCurrentView();
 };
 
-const ensureMouseMode = () => {
-  if (!selectionMode) {
-    return;
+const setMouseCaptureEnabled = (enabled) => {
+  selectionMode = !enabled;
+  if (enabled) {
+    screen.program.enableMouse();
+  } else {
+    screen.program.disableMouse();
   }
-
-  selectionMode = false;
-  screen.program.enableMouse();
   updateChrome();
+};
+
+const focusSidebar = () => {
+  focusedPane = 'sidebar';
+  sidebar.focus();
+};
+
+const focusLogPane = () => {
+  focusedPane = 'log';
+  logPane.focus();
+};
+
+const applySidebarFocus = () => {
+  focusSidebar();
+};
+
+const applyLogFocus = () => {
+  focusLogPane();
+};
+
+const togglePaneAndMouse = () => {
+  // Tab toggles both focus and mouse capture together.
+  if (selectionMode) {
+    setMouseCaptureEnabled(true);
+    applySidebarFocus();
+  } else {
+    setMouseCaptureEnabled(false);
+    applyLogFocus();
+  }
+  screen.render();
+};
+
+const refocus = () => {
+  if (focusedPane === 'log') {
+    logPane.focus();
+  } else {
+    sidebar.focus();
+  }
 };
 
 const activateView = (selected) => {
   switchView(selected);
-  sidebar.focus();
+  refocus();
   screen.render();
 };
 
@@ -298,6 +337,7 @@ sidebar.on('select', (item) => {
 
 sidebar.items.forEach((item, index) => {
   item.on('click', () => {
+    applySidebarFocus();
     activateView(PROCESS_NAMES[index]);
   });
 });
@@ -333,22 +373,39 @@ logPane.on('wheeldown', () => {
   screen.render();
 });
 
-const toggleSelectionMode = () => {
-  selectionMode = !selectionMode;
+screen.program.prependListener('keypress', (ch, key) => {
+  if (key.name === 'tab' || (key.ctrl && key.name === 'i')) {
+    togglePaneAndMouse();
+  }
+});
 
-  if (selectionMode) {
-    screen.program.disableMouse();
-  } else {
-    screen.program.enableMouse();
+screen.on('mouseup', (data) => {
+  if (data.action !== 'mouseup') {
+    return;
   }
 
-  updateChrome();
-  screen.render();
-};
+  const sp = sidebar.lpos;
+  const lp = logPane.lpos;
+  if (!sp || !lp) {
+    return;
+  }
 
-screen.key(['s'], toggleSelectionMode);
+  const { x, y } = data;
+  const inSidebar = x >= sp.xi && x < sp.xl && y >= sp.yi && y < sp.yl;
+  const inLog = x >= lp.xi && x < lp.xl && y >= lp.yi && y < lp.yl;
+
+  if (inSidebar) {
+    applySidebarFocus();
+    screen.render();
+  } else if (inLog) {
+    applyLogFocus();
+    screen.render();
+  }
+});
+
 screen.key(['escape'], () => {
-  ensureMouseMode();
+  setMouseCaptureEnabled(true);
+  applySidebarFocus();
   screen.render();
 });
 screen.key(['1', '2', '3', '4', '5', '6'], (_, key) => {
@@ -401,7 +458,7 @@ const quit = () => {
 
 screen.key(['q', 'C-c'], quit);
 
-sidebar.focus();
+setMouseCaptureEnabled(true);
+applySidebarFocus();
 sidebar.select(0);
-updateChrome();
 renderCurrentView({ stickToBottom: true });

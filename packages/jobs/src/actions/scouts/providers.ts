@@ -33,7 +33,8 @@ export interface EmailProvider {
   }): Promise<void>;
 }
 
-const DEFAULT_COHERE_MODEL = 'command-r-plus';
+// `command-r-plus` alias was deprecated; use a versioned model by default.
+const DEFAULT_COHERE_MODEL = 'command-r-plus-08-2024';
 
 const relevanceLabel = (value: ScoutRelevanceWindow) =>
   value === 'day' ? 'last 24 hours' : 'last 7 days';
@@ -103,14 +104,17 @@ export const cohereSummaryProvider: SummaryProvider = {
           .join('\n\n')
       : 'No relevant sources were found for this scout run.';
 
+    const model = process.env.COHERE_MODEL || DEFAULT_COHERE_MODEL;
+
     const response = await fetch('https://api.cohere.com/v2/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
+        'X-Client-Name': 'rolodex',
       },
       body: JSON.stringify({
-        model: process.env.COHERE_MODEL || DEFAULT_COHERE_MODEL,
+        model,
         messages: [
           {
             role: 'system',
@@ -139,7 +143,10 @@ export const cohereSummaryProvider: SummaryProvider = {
     });
 
     if (!response.ok) {
-      throw new Error(`Cohere request failed with HTTP ${response.status}.`);
+      const details = await response.text().catch(() => '');
+      throw new Error(
+        `Cohere request failed with HTTP ${response.status} (model=${model}).${details ? ` Body: ${details}` : ''}`
+      );
     }
 
     const payload = (await response.json()) as {
