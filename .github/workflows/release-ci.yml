@@ -1,0 +1,67 @@
+name: Rolodex Release CI
+
+on:
+  push:
+    branches: [release]
+  workflow_dispatch:
+
+# Prisma CLI during `turbo` / generate reads DIRECT_URL from packages/db/prisma.config.ts (no live DB needed).
+env:
+  DIRECT_URL: postgresql://127.0.0.1:5432/ci_placeholder
+  DATABASE_URL: postgresql://127.0.0.1:5432/ci_placeholder
+
+jobs:
+  package-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.4
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      # Same sequence as root `bun run ci`: typecheck → lint → format:check → build → test
+      - name: CI
+        run: bun run ci
+
+      - name: Build macOS packages
+        run: bun run --filter @rolodex/desktop dist:mac
+
+      # Packaging succeeded if dist:mac exited 0; this checks outputs exist and DMG integrity.
+      - name: Verify macOS artifacts
+        run: |
+          set -euo pipefail
+          REL="apps/desktop/release"
+          if [[ ! -d "$REL" ]]; then
+            echo "::error::Missing $REL"
+            exit 1
+          fi
+          shopt -s nullglob
+          cd "$REL"
+          dmgs=(*.dmg)
+          if [[ ${#dmgs[@]} -eq 0 ]]; then
+            echo "::error::No .dmg produced in $REL"
+            ls -la
+            exit 1
+          fi
+          for dmg in "${dmgs[@]}"; do
+            echo "hdiutil verify: $dmg"
+            hdiutil verify "$dmg"
+          done
+          zips=(*.zip)
+          blockmaps=(*.blockmap)
+          echo "Artifacts: ${#dmgs[@]} dmg(s), ${#zips[@]} zip(s), ${#blockmaps[@]} blockmap(s)"
+
+      - name: Upload macOS Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rolodex-macos-packages
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+            apps/desktop/release/*.blockmap
