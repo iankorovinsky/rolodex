@@ -200,11 +200,62 @@ const pipeProcessOutput = (name, proc) => {
 };
 
 const spawnOpts = { stdio: 'pipe', env: { ...process.env } };
+
+const requirePort = (value, name) => {
+  if (!value) {
+    throw new Error(`Missing ${name}. Set it in .env (example: "${name}=localhost:7233")`);
+  }
+
+  const match = String(value).match(/:(\d+)/);
+  if (!match) {
+    throw new Error(
+      `Invalid ${name}="${value}". Expected host:port (example: "localhost:7233" or "http://localhost:7233").`
+    );
+  }
+
+  const port = Number(match[1]);
+  if (!Number.isFinite(port)) {
+    throw new Error(`Invalid ${name} port in "${value}".`);
+  }
+  return port;
+};
+
+const temporalServerUrl = spawnOpts.env.TEMPORAL_SERVER_URL;
+const temporalUiUrl = spawnOpts.env.TEMPORAL_UI_URL;
+
+const TEMPORAL_GRPC_PORT = requirePort(temporalServerUrl, 'TEMPORAL_SERVER_URL');
+const TEMPORAL_UI_PORT = requirePort(temporalUiUrl, 'TEMPORAL_UI_URL');
+const TEMPORAL_DB_FILENAME = path.resolve(__dirname, '../../infra/temporal/dev.db');
+
 const processes = {
   desktop: spawn('bun', ['run', 'dev'], { ...spawnOpts, cwd: 'apps/desktop' }),
   storybook: spawn('bun', ['run', 'storybook'], { ...spawnOpts, cwd: 'apps/desktop' }),
   api: spawn('bun', ['run', 'dev'], { ...spawnOpts, cwd: 'apps/api' }),
-  temporal: spawn(process.execPath, [path.resolve(__dirname, 'start-temporal-dev.mjs')], spawnOpts),
+  temporal: spawn(
+    'temporal',
+    [
+      'server',
+      'start-dev',
+      '--ip',
+      'localhost',
+      '--port',
+      String(TEMPORAL_GRPC_PORT),
+      '--ui-ip',
+      'localhost',
+      '--ui-port',
+      String(TEMPORAL_UI_PORT),
+      '--db-filename',
+      TEMPORAL_DB_FILENAME,
+    ],
+    {
+      ...spawnOpts,
+      env: {
+        ...spawnOpts.env,
+        TEMPORAL_SERVER_URL: `localhost:${TEMPORAL_GRPC_PORT}`,
+        TEMPORAL_UI_URL: `http://localhost:${TEMPORAL_UI_PORT}`,
+      },
+    }
+  ),
   worker: spawn('bun', ['run', '--filter', '@rolodex/jobs', 'dev'], spawnOpts),
   db: spawn('bun', ['run', 'generate'], { ...spawnOpts, cwd: 'packages/db' }),
 };

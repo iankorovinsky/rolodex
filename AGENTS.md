@@ -10,7 +10,7 @@
 - `packages/imessage-sync/`: macOS Messages sync CLI package (`@rolodex/imessage-sync`).
 - `infra/temporal/`: Local Temporal dev SQLite state (e.g. `dev.db`).
 - Root `eslint.shared.mjs`: shared ESLint flat config composed by each app’s `eslint.config.mjs` (shared ESLint-related deps live on the root `package.json`).
-- `tools/scripts/`: Repo utilities (Blessed dev TUI, Temporal dev launcher, Electron install helper, optional `dev-with-temporal.mjs`).
+- `tools/scripts/`: Repo utilities (Blessed dev TUI, etc.).
 - Root configs: `package.json`, `turbo.json`, `tsconfig.base.json`, `eslint.shared.mjs`.
 
 ## Build, Test, and Development Commands
@@ -28,9 +28,7 @@
   `bun run --filter @rolodex/db generate` · `migrate:dev` · `studio` · `format`  
   (or `turbo run generate --filter=@rolodex/db` for generate only).
 - **Temporal worker:** `bun run --filter @rolodex/jobs dev`
-- **Temporal dev server only:** `node ./tools/scripts/start-temporal-dev.mjs`
-- **Optional full stack without the TUI:** `node ./tools/scripts/dev-with-temporal.mjs` (starts Temporal + worker + desktop + API via Turbo).
-- **Electron binary repair:** `node ./tools/scripts/install-electron.mjs` if the Electron download failed after install.
+- Temporal dev server + worker are started via `bun run dev` (the TUI) or package-specific `bun run --filter ...` commands.
 - **imessage-sync CLI:** `bun run --filter @rolodex/imessage-sync run` (from package script).
 
 ## Coding Style & Naming Conventions

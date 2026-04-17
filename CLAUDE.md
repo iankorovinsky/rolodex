@@ -21,12 +21,6 @@ bun install
 # Blessed dev TUI (desktop, API, Temporal, worker, storybook, db — see tools/scripts/dev-tui.js)
 bun run dev
 
-# Optional: Temporal + worker + desktop + API without the TUI
-node ./tools/scripts/dev-with-temporal.mjs
-
-# Temporal dev server only
-node ./tools/scripts/start-temporal-dev.mjs
-
 # Temporal worker only
 bun run --filter @rolodex/jobs dev
 
@@ -71,7 +65,7 @@ bun run --filter @rolodex/db format         # prisma format
 ### Temporal (Local Development)
 
 ```bash
-node ./tools/scripts/start-temporal-dev.mjs
+bun run dev
 ```
 
 The local dev server is pinned to gRPC port `7233` and Web UI port `8233`, with SQLite state stored at `infra/temporal/dev.db`.

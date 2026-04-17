@@ -31,12 +31,6 @@ cp .env.example .env
 bun install
 ```
 
-If Electron’s postinstall download failed:
-
-```bash
-node ./tools/scripts/install-electron.mjs
-```
-
 Prisma client (after clone or schema change):
 
 ```bash
@@ -65,14 +59,6 @@ bun run ci               # typecheck → lint → format:check → build → tes
 bun run format           # Prettier write (includes .mjs)
 bun run fmt              # alias → format
 bun run format:check     # Prettier check only
-```
-
-**Also in the repo (no root npm script):**
-
-```bash
-node ./tools/scripts/start-temporal-dev.mjs   # Temporal dev server only
-node ./tools/scripts/dev-with-temporal.mjs      # Temporal + worker + desktop + API (Turbo)
-node ./tools/scripts/install-electron.mjs      # Fix Electron binary if needed
 ```
 
 ### Database (`@rolodex/db`)
