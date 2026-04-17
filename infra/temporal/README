@@ -16,6 +16,8 @@ That launches the dev TUI (`tools/scripts/dev-tui.js`) which starts Temporal via
 
 If `infra/temporal/dev.db` doesn’t exist yet, Temporal will create it on first start.
 
+*Note: If you are running multiple Temporal projects, this DB will be assigned to all of them. This repo setup assumes that you're only using the Temporal on this repo (and makes the DB so it can be used for Rolodex).
+
 ### Requirements
 
 - You need the `temporal` CLI available on your PATH.
