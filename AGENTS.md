@@ -70,11 +70,11 @@
 
 ## Database Migration Policy
 
-- For schema changes, edit `packages/db/prisma/schema/schema.prisma` first.
+- For schema changes, edit `packages/db/models/*.prisma` first (`schema.prisma` = generator + datasource).
 - Create and apply migrations with `bun run --filter @rolodex/db migrate:dev` (or your hosting’s deploy migrate script).
 - Run `bun run --filter @rolodex/db generate` after a successful migration.
 - Prefer the repo Bun commands over raw Prisma CLI from random directories.
-- Treat `packages/db/prisma/schema/migrations/*` as generated artifacts that should only change as a result of running migrations through the normal flow.
-- Never manually create, rename, or edit files under `packages/db/prisma/schema/migrations/` unless explicitly asked for a manual SQL migration.
+- Treat `packages/db/migrations/*` as generated artifacts that should only change as a result of running migrations through the normal flow.
+- Never manually create, rename, or edit files under `packages/db/migrations/` unless explicitly asked for a manual SQL migration.
 - Never use `prisma db push` as a substitute for migrations.
 - If `migrate:dev` fails, stop and report the error. Do not hand-write `migration.sql` or make manual migration edits to work around it.

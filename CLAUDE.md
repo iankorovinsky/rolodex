@@ -53,12 +53,12 @@ bun run --filter @rolodex/db format         # prisma format
 
 ### Database Migration Policy
 
-- Edit `packages/db/prisma/schema/schema.prisma` first for any schema change.
+- Edit `packages/db/models/*.prisma` (multi-file schema) first for any schema change; `schema.prisma` holds generator + datasource.
 - Create and apply migrations with `bun run --filter @rolodex/db migrate:dev`.
 - Run `bun run --filter @rolodex/db generate` after a successful migration.
 - Prefer the repo Bun commands over ad-hoc Prisma from the wrong cwd.
-- Treat `packages/db/prisma/schema/migrations/*` as generated artifacts that should only change as a result of running migrations through the normal flow.
-- Never manually create, rename, or edit files under `packages/db/prisma/schema/migrations/` unless explicitly asked for a manual SQL migration.
+- Treat `packages/db/migrations/*` as generated artifacts that should only change as a result of running migrations through the normal flow.
+- Never manually create, rename, or edit files under `packages/db/migrations/` unless explicitly asked for a manual SQL migration.
 - Never use `prisma db push` as a substitute for migrations.
 - If `migrate:dev` fails, stop and report the error. Do not hand-write `migration.sql` or manually patch migration files to work around it.
 

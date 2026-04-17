@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "dotenv -e ../../.env -- tsx watch ./src/worker.ts",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "DATABASE_URL=\"postgresql://127.0.0.1:5432/rolodex_test_placeholder\" bun test"
   },
   "dependencies": {
     "@temporalio/client": "^1.13.0",

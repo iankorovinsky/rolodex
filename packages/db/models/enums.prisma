@@ -1,0 +1,65 @@
+enum AvatarId {
+  CAT
+  PANDA
+  BUNNY
+  BEAR
+  GORILLA
+  DUCK
+  GIRAFFE
+  PENGUIN
+  SHARK
+  DRAGON
+}
+
+enum IntegrationProvider {
+  IMESSAGE
+  GOOGLE
+  OUTLOOK
+  GRANOLA
+}
+
+enum IntegrationConnectionStatus {
+  ACTIVE
+  REFRESH_FAILED
+  RECONNECT_REQUIRED
+}
+
+enum PersonEmailDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum RequestType {
+  ASK
+  FAVOUR
+}
+
+enum ScoutScheduleUnit {
+  DAY
+  WEEK
+}
+
+enum ScoutWeekday {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+enum ScoutRelevanceWindow {
+  DAY
+  WEEK
+}
+
+enum ScoutStatus {
+  ACTIVE
+  PAUSED
+}

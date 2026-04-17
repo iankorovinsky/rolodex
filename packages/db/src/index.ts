@@ -1,4 +1,6 @@
-export { prisma } from './client'; // exports instance of prisma
-export { Prisma } from '../generated/client/client';
-export * from '../generated/client/enums';
-export type * from '../generated/client/client';
+import './global.js';
+
+export { prisma } from './client.js'; // exports instance of prisma
+export { Prisma } from '../generated/client/client.js';
+export * from '../generated/client/enums.js';
+export type * from '../generated/client/client.js';

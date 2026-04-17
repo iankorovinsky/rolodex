@@ -1,0 +1,29 @@
+model UserIntegration {
+  id                   String                      @id @default(uuid()) @db.Uuid
+  userId               String                      @db.Uuid
+  provider             IntegrationProvider
+  externalAccountId    String?
+  accountLabel         String?
+  accountEmail         String?
+  accessToken          String?
+  refreshToken         String?
+  tokenScope           String?
+  tokenExpiresAt       DateTime?
+  connectedAt          DateTime?
+  lastValidatedAt      DateTime?
+  connectionStatus     IntegrationConnectionStatus @default(ACTIVE)
+  lastRefreshAt        DateTime?
+  lastRefreshAttemptAt DateTime?
+  lastRefreshError     String?
+  reauthRequiredAt     DateTime?
+  metadata             Json?
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+  disconnectedAt       DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider, externalAccountId])
+  @@index([userId, disconnectedAt])
+  @@map("user_integrations")
+}

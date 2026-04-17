@@ -1,0 +1,30 @@
+model Scout {
+  id                String               @id @default(uuid()) @db.Uuid
+  userId            String               @db.Uuid
+  name              String
+  topic             String               @db.Text
+  scheduleUnit      ScoutScheduleUnit
+  scheduleInterval  Int
+  scheduleDayOfWeek ScoutWeekday?
+  scheduleTimeLocal String
+  timezone          String
+  scheduleAnchorAt  DateTime
+  relevanceWindow   ScoutRelevanceWindow
+  recipientEmails   Json
+  status            ScoutStatus          @default(ACTIVE)
+  scheduleId        String?
+  nextRunAt         DateTime?
+  lastRunAt         DateTime?
+  lastSuccessAt     DateTime?
+  lastFailureAt     DateTime?
+  lastFailureReason String?              @db.Text
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  deletedAt         DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, deletedAt])
+  @@index([userId, status, deletedAt])
+  @@map("scouts")
+}

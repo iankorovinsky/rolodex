@@ -1,0 +1,50 @@
+model Company {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roles Role[]
+
+  @@unique([userId, name])
+  @@index([userId, deletedAt])
+  @@map("companies")
+}
+
+model Role {
+  id        String   @id @default(uuid()) @db.Uuid
+  personId  String   @db.Uuid
+  companyId String?  @db.Uuid
+  title     String
+  company   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  person        Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  companyRecord Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([personId])
+  @@index([companyId])
+  @@index([title])
+  @@index([company])
+  @@map("roles")
+}
+
+model Tag {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  name      String
+  color     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  people PersonTag[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("tags")
+}

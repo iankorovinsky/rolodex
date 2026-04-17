@@ -1,0 +1,105 @@
+model Person {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @db.Uuid
+  firstName   String?
+  lastName    String?
+  description String?
+  linkedinUrl String?
+  xUrl        String?
+  isFavorite  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roles          Role[]
+  tags           PersonTag[]
+  phones         PersonPhone[]
+  emails         PersonEmail[]
+  messageEvent   MessageEvent?
+  emailEvents    PersonEmailEvent[]
+  calendarEvents PersonCalendarEvent[]
+  notes          PersonNote[]
+  requests       Request[]
+
+  @@index([userId])
+  @@index([firstName])
+  @@index([lastName])
+  @@index([userId, isFavorite])
+  @@index([userId, deletedAt])
+  @@map("people")
+}
+
+model PersonPhone {
+  id          String   @id @default(uuid()) @db.Uuid
+  personId    String   @db.Uuid
+  phoneNumber String
+  isPrimary   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, phoneNumber])
+  @@index([personId])
+  @@index([phoneNumber])
+  @@map("person_phones")
+}
+
+model PersonEmail {
+  id        String   @id @default(uuid()) @db.Uuid
+  personId  String   @db.Uuid
+  email     String
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, email])
+  @@index([personId])
+  @@index([email])
+  @@map("person_emails")
+}
+
+model MessageEvent {
+  id        String           @id @default(uuid()) @db.Uuid
+  personId  String           @unique @db.Uuid
+  body      String?          @db.Text
+  sentAt    DateTime
+  direction MessageDirection
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([sentAt])
+  @@map("message_events")
+}
+
+model PersonTag {
+  id        String   @id @default(uuid()) @db.Uuid
+  personId  String   @db.Uuid
+  tagId     String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, tagId])
+  @@index([personId])
+  @@index([tagId])
+  @@map("person_tags")
+}
+
+model PersonNote {
+  id        String   @id @default(uuid()) @db.Uuid
+  personId  String   @db.Uuid
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([personId])
+  @@map("person_notes")
+}

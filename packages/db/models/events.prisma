@@ -1,0 +1,43 @@
+model PersonEmailEvent {
+  id           String                @id @default(uuid()) @db.Uuid
+  personId     String                @db.Uuid
+  emailAddress String
+  subject      String?
+  snippet      String?               @db.Text
+  direction    PersonEmailDirection?
+  occurredAt   DateTime
+  source       String?
+  externalId   String?
+  raw          Json?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([personId])
+  @@index([occurredAt])
+  @@index([source, externalId])
+  @@map("person_email_events")
+}
+
+model PersonCalendarEvent {
+  id          String    @id @default(uuid()) @db.Uuid
+  personId    String    @db.Uuid
+  title       String
+  description String?   @db.Text
+  startsAt    DateTime
+  endsAt      DateTime?
+  location    String?
+  source      String?
+  externalId  String?
+  raw         Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([personId])
+  @@index([startsAt])
+  @@index([source, externalId])
+  @@map("person_calendar_events")
+}

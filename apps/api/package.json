@@ -2,21 +2,21 @@
   "name": "@rolodex/api",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "bun build ./src/server.ts --outdir ./dist --target bun",
     "start": "dotenv -e ../../.env -- bun ./dist/server.js",
     "dev": "dotenv -e ../../.env -- bun --watch ./src/server.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint 'src/**/*.ts'",
-    "test": "bun test",
-    "test:watch": "bun test --watch"
+    "test": "DATABASE_URL=\"postgresql://127.0.0.1:5432/rolodex_test_placeholder\" bun test",
+    "test:watch": "DATABASE_URL=\"postgresql://127.0.0.1:5432/rolodex_test_placeholder\" bun test --watch"
   },
   "dependencies": {
     "@temporalio/client": "^1.13.0",
     "@rolodex/db": "workspace:*",
     "@rolodex/jobs": "workspace:*",
     "@rolodex/types": "workspace:*",
-    "@prisma/client": "^6.0.0",
     "@supabase/supabase-js": "^2.49.8",
     "dotenv": "^16.4.7",
     "express": "^5.0.0"

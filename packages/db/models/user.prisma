@@ -1,0 +1,49 @@
+model User {
+  id           String            @id @db.Uuid
+  email        String            @unique
+  firstName    String?
+  lastName     String?
+  avatarId     AvatarId?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  people       Person[]
+  companies    Company[]
+  tags         Tag[]
+  syncCursors  UserSyncCursor[]
+  deviceTokens UserDeviceToken[]
+  integrations UserIntegration[]
+  scouts       Scout[]
+
+  @@map("users")
+}
+
+model UserSyncCursor {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @db.Uuid
+  source        String
+  cursor        String?
+  lastSuccessAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, source])
+  @@index([userId])
+  @@map("user_sync_cursors")
+}
+
+model UserDeviceToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  name       String
+  tokenHash  String    @unique
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@map("user_device_tokens")
+}

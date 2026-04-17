@@ -362,7 +362,7 @@ screen.key(['1', '2', '3', '4', '5', '6'], (_, key) => {
   activateView(selected);
 });
 
-const schemaWatcher = chokidar.watch('packages/db/prisma/schema/**/*.prisma', {
+const schemaWatcher = chokidar.watch('packages/db/models/**/*.prisma', {
   ignored: /node_modules/,
   persistent: true,
   ignoreInitial: true,
